@@ -75,9 +75,10 @@ class TestErrors:
 
 
 @dataclass
-class NormalDistributionSampleParams(SampleParams):
+class NormalDistributionWithConstantRateSampleParams(SampleParams):
     mean: float
     std: float
+    n_users_per_day: int
 
 
 @dataclass
@@ -98,7 +99,6 @@ TExperimentConductor = tp.Callable[[Groups, Effect], FoundEffect]
 
 def calculate_error_rates(
         effect: Effect,
-        users_per_day: int,  # todo: make this a function of time
         sample_params: SampleParams,
         sample_generator: TSampleGenerator,
         max_days: int = 30,
@@ -111,7 +111,6 @@ def calculate_error_rates(
     Args:
         effect: effect size in percents, possible values > 0,
             let's say 0.1 is passed then metric has increased on 10%.
-        users_per_day: users increment per day
         max_days: max experiment duration
         sample_params: params passed to `sample_generator`
         sample_generator: generator of observation samples
@@ -125,7 +124,7 @@ def calculate_error_rates(
     days_range = trange(1, max_days + 1) if verbose else range(1, max_days + 1)
     return [
         measure_error_rate(
-            sample_size=n_days * users_per_day,
+            n_days=n_days,
             effect=effect,
             sample_params=sample_params,
             sample_generator=sample_generator,
@@ -136,9 +135,10 @@ def calculate_error_rates(
     ]
 
 
-def get_groups_samples_from_normal(
-        sample_size: int, sample_params: NormalDistributionSampleParams,
+def get_groups_for_normal_with_constant_users_per_day_rate(
+        n_days: int, sample_params: NormalDistributionWithConstantRateSampleParams,
 ) -> Groups:
+    sample_size = sample_params.n_users_per_day * n_days
     return Groups(
         np.random.normal(sample_params.mean, sample_params.std, size=sample_size),
         np.random.normal(sample_params.mean, sample_params.std, size=sample_size),
@@ -146,7 +146,7 @@ def get_groups_samples_from_normal(
 
 
 def measure_error_rate(
-        sample_size: int,
+        n_days: int,
         effect: Effect,
         sample_params: SampleParams,
         sample_generator: TSampleGenerator,
@@ -155,7 +155,7 @@ def measure_error_rate(
 ) -> TestErrors:
     test_errors = TestErrors()
     for _ in range(n_iterations):
-        groups = sample_generator(sample_size, sample_params)
+        groups = sample_generator(n_days, sample_params)
         experiment_results = experiment_conductor(groups, effect)
         test_errors += experiment_results.get_test_errors()
     return test_errors
@@ -236,14 +236,14 @@ def find_optimal_duration(error_rates: tp.List[TestErrors], error_rate_threshold
 if __name__ == '__main__':
     experiment = dict(
         effect=Effect(0.1, is_additive=False),
-        users_per_day=10,
         max_days=30,
     )
     experiment['error_rates'] = calculate_error_rates(
         effect=experiment['effect'],
-        users_per_day=experiment['users_per_day'],
-        sample_params=NormalDistributionSampleParams(100, 10),
-        sample_generator=get_groups_samples_from_normal,
+        sample_params=NormalDistributionWithConstantRateSampleParams(
+            mean=100, std=10, n_users_per_day=10,
+        ),
+        sample_generator=get_groups_for_normal_with_constant_users_per_day_rate,
         max_days=experiment['max_days'],
         verbose=True,
     )
