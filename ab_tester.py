@@ -54,6 +54,15 @@ class NormalDistributionSampleParams:
     std: float
 
 
+@dataclass
+class ExperimentResults:
+    no_effect_test: bool
+    injected_effect_test: bool
+
+
+TExperimentConductor = tp.Callable[[Groups, float, bool], ExperimentResults]
+
+
 def calculate_error_rates(
         effect: float,
         users_per_day: int,  # todo: make this a function of time
@@ -75,7 +84,11 @@ def calculate_error_rates(
     """
     return [
         measure_error_rate(
-            n_days * users_per_day, effect, sample_params, sample_generator, is_additive_effect,
+            sample_size=n_days * users_per_day,
+            effect=effect,
+            sample_params=sample_params,
+            sample_generator=sample_generator,
+            is_additive_effect=is_additive_effect,
         )
         for n_days in range(1, max_days + 1)
     ]
@@ -97,23 +110,30 @@ def measure_error_rate(
         sample_generator: TSampleGenerator,
         is_additive_effect: bool,
         n_iterations: int = 250,
+        experiment_conductor: TExperimentConductor = None,
 ) -> TestErrors:
+    if experiment_conductor is None:
+        experiment_conductor = conduct_experiment_using_bootstrap
+
     n_false_positive_effects = 0
     n_undiscovered_effects = 0
     for _ in range(n_iterations):
         groups = sample_generator(sample_size, sample_params)
-        found_effect_aa_test, found_effect_ab_test = conduct_experiment(groups, effect)
+        found_effect_aa_test, found_effect_ab_test = experiment_conductor(
+            groups, effect, is_additive_effect,
+        )
         n_false_positive_effects += found_effect_aa_test
         n_undiscovered_effects += not found_effect_ab_test
     return TestErrors(n_false_positive_effects, n_undiscovered_effects, n_iterations)
 
 
-def conduct_experiment(
+def conduct_experiment_using_bootstrap(
         groups: Groups,
         effect: float,
+        is_additive_effect: bool,
         metric_estimator: TMetricEstimator = np.mean,
         boostrap_size: int = 1000,
-) -> tp.Tuple[bool, bool]:
+) -> ExperimentResults:
     metric_pilot = metric_estimator(groups.pilot)
     metric_control = metric_estimator(groups.control)
     boostrap_samples = bootstrap_samples(boostrap_size, groups)
@@ -123,15 +143,27 @@ def conduct_experiment(
         bootstraped_estimations=sampled_metric_pilot - sampled_metric_control,
         pointwise_estimation=metric_pilot - metric_control
     )
-    injected_effect = (1 + effect)
     conf_interval_injected_effect_test = get_ci_bootstrap_pivotal(
-        bootstraped_estimations=injected_effect * sampled_metric_pilot - sampled_metric_control,
-        pointwise_estimation=injected_effect * metric_pilot - metric_control
+        bootstraped_estimations=(
+                _inject_effect(sampled_metric_pilot, effect, is_additive_effect)
+                - sampled_metric_control
+        ),
+        pointwise_estimation=(
+                _inject_effect(metric_pilot, effect, is_additive_effect)
+                - metric_control
+        )
     )
-    return (
+    return ExperimentResults(
         _is_significant_diff(conf_interval_no_effect_test),
         _is_significant_diff(conf_interval_injected_effect_test),
     )
+
+
+def _inject_effect(metric: float, effect: float, is_additive: bool) -> float:
+    if is_additive:
+        return metric + effect
+    else:
+        return metric * (1 + effect)
 
 
 def bootstrap_samples(boostrap_size: int, groups: Groups) -> Groups:
