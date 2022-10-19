@@ -8,6 +8,15 @@ from tqdm.auto import trange
 
 
 @dataclass
+class Effect:
+    size: float
+    is_additive: bool
+
+    def inject(self, metric: float) -> float:
+        return metric + self.size if self.is_additive else metric * (1 + self.size)
+
+
+@dataclass
 class SampleParams(ABC):
     pass
 
@@ -61,6 +70,9 @@ class TestErrors:
             self.n_experiments_per_each + other.n_experiments_per_each
         )
 
+    def __repr__(self) -> str:
+        return f"FP: {self.n_false_positive}, FN: {self.n_false_negative}"
+
 
 @dataclass
 class NormalDistributionSampleParams(SampleParams):
@@ -75,23 +87,22 @@ class FoundEffect:
 
     def get_test_errors(self) -> TestErrors:
         return TestErrors(
-            self.given_no_effect,
-            not self.given_effect,
+            n_false_positive=self.given_no_effect,
+            n_false_negative=not self.given_effect,
             n_experiments_per_each=1,
         )
 
 
-TExperimentConductor = tp.Callable[[Groups, float, bool], FoundEffect]
+TExperimentConductor = tp.Callable[[Groups, Effect], FoundEffect]
 
 
 def calculate_error_rates(
-        effect: float,
+        effect: Effect,
         users_per_day: int,  # todo: make this a function of time
         sample_params: SampleParams,
         sample_generator: TSampleGenerator,
         max_days: int = 30,
         n_experiment_runs_per_day_simulation: int = 250,
-        is_additive_effect: bool = False,
         experiment_conductor: TExperimentConductor = None,
         verbose: bool = False,
 ) -> tp.List[TestErrors]:
@@ -104,7 +115,6 @@ def calculate_error_rates(
         max_days: max experiment duration
         sample_params: params passed to `sample_generator`
         sample_generator: generator of observation samples
-        is_additive_effect: states if affect is added or multiplied
         n_experiment_runs_per_day_simulation: n_observations per day we get to estimate error rates
         experiment_conductor:
         verbose:
@@ -119,7 +129,6 @@ def calculate_error_rates(
             effect=effect,
             sample_params=sample_params,
             sample_generator=sample_generator,
-            is_additive_effect=is_additive_effect,
             n_iterations=n_experiment_runs_per_day_simulation,
             experiment_conductor=experiment_conductor,
         )
@@ -138,27 +147,23 @@ def get_groups_samples_from_normal(
 
 def measure_error_rate(
         sample_size: int,
-        effect: float,
+        effect: Effect,
         sample_params: SampleParams,
         sample_generator: TSampleGenerator,
-        is_additive_effect: bool,
         experiment_conductor: TExperimentConductor,
         n_iterations: int = 250,
 ) -> TestErrors:
     test_errors = TestErrors()
     for _ in range(n_iterations):
         groups = sample_generator(sample_size, sample_params)
-        experiment_results = experiment_conductor(
-            groups, effect, is_additive_effect,
-        )
+        experiment_results = experiment_conductor(groups, effect)
         test_errors += experiment_results.get_test_errors()
     return test_errors
 
 
 def conduct_experiments_using_bootstrap(
         groups: Groups,
-        effect: float,
-        is_additive_effect: bool,
+        effect: Effect,
         metric_estimator: TMetricEstimator = np.mean,
         boostrap_size: int = 1000,
 ) -> FoundEffect:
@@ -169,29 +174,16 @@ def conduct_experiments_using_bootstrap(
     sampled_metric_pilot = np.apply_along_axis(metric_estimator, axis=1, arr=boostrap_samples.pilot)
     conf_interval_no_effect_test = get_ci_bootstrap_pivotal(
         bootstraped_estimations=sampled_metric_pilot - sampled_metric_control,
-        pointwise_estimation=metric_pilot - metric_control
+        pointwise_estimation=metric_pilot - metric_control,
     )
     conf_interval_injected_effect_test = get_ci_bootstrap_pivotal(
-        bootstraped_estimations=(
-                inject_effect(sampled_metric_pilot, effect, is_additive_effect)
-                - sampled_metric_control
-        ),
-        pointwise_estimation=(
-                inject_effect(metric_pilot, effect, is_additive_effect)
-                - metric_control
-        )
+        bootstraped_estimations=effect.inject(sampled_metric_pilot) - sampled_metric_control,
+        pointwise_estimation=effect.inject(metric_pilot) - metric_control,
     )
     return FoundEffect(
-        given_effect=conf_interval_injected_effect_test.contains(0),
-        given_no_effect=conf_interval_no_effect_test.contains(0),
+        given_effect=not conf_interval_injected_effect_test.contains(0),
+        given_no_effect=not conf_interval_no_effect_test.contains(0),
     )
-
-
-def inject_effect(metric: float, effect: float, is_additive: bool) -> float:
-    if is_additive:
-        return metric + effect
-    else:
-        return metric * (1 + effect)
 
 
 def bootstrap_samples(boostrap_size: int, groups: Groups) -> Groups:
@@ -242,16 +234,17 @@ def find_optimal_duration(error_rates: tp.List[TestErrors], error_rate_threshold
 
 
 if __name__ == '__main__':
-    experiment_effect = 0.1
-    experiment_users_per_day = 10
-    experiment_max_days = 30
-    experiment_error_rates = calculate_error_rates(
-        effect=experiment_effect,
-        users_per_day=experiment_users_per_day,
+    experiment = dict(
+        effect=Effect(0.1, is_additive=False),
+        users_per_day=10,
+        max_days=30,
+    )
+    experiment['error_rates'] = calculate_error_rates(
+        effect=experiment['effect'],
+        users_per_day=experiment['users_per_day'],
         sample_params=NormalDistributionSampleParams(100, 10),
         sample_generator=get_groups_samples_from_normal,
-        max_days=experiment_max_days,
-        is_additive_effect=False,
+        max_days=experiment['max_days'],
         verbose=True,
     )
-    find_optimal_duration(experiment_error_rates, 0.2)
+    find_optimal_duration(experiment['error_rates'], 0.2)
