@@ -161,15 +161,21 @@ def measure_error_rate(
     return test_errors
 
 
+TSampleBootstraper = tp.Callable[[int, Groups], Groups]
+
+
 def conduct_experiments_using_bootstrap(
         groups: Groups,
         effect: Effect,
         metric_estimator: TMetricEstimator = np.mean,
         boostrap_size: int = 1000,
+        sample_bootstrapper: TSampleBootstraper = None,
 ) -> FoundEffect:
+    if sample_bootstrapper is None:
+        sample_bootstrapper = bootstrap_samples
     metric_pilot = metric_estimator(groups.pilot)
     metric_control = metric_estimator(groups.control)
-    boostrap_samples = bootstrap_samples(boostrap_size, groups)
+    boostrap_samples = sample_bootstrapper(boostrap_size, groups)
     sampled_metric_control = np.apply_along_axis(metric_estimator, axis=1, arr=boostrap_samples.control)
     sampled_metric_pilot = np.apply_along_axis(metric_estimator, axis=1, arr=boostrap_samples.pilot)
     conf_interval_no_effect_test = get_ci_bootstrap_pivotal(
