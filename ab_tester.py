@@ -172,14 +172,30 @@ def conduct_experiments_using_bootstrap(
         metric_estimator: TMetricEstimator = np.mean,
         boostrap_size: int = 1000,
         sample_bootstrapper: TSampleBootstraper = None,
+        estimator_works_with_bootstrap_sample: bool = False,
 ) -> FoundEffect:
+    """
+    Args:
+        groups: pilot & control samples to use for estimation
+        effect:
+        metric_estimator:
+        boostrap_size:
+        sample_bootstrapper:
+        estimator_works_with_bootstrap_sample:
+            just call `metric_estimator` if true,
+            use `metric_estimator` with `np.apply_along_axis` otherwise
+    """
     if sample_bootstrapper is None:
         sample_bootstrapper = bootstrap_samples
     metric_pilot = metric_estimator(groups.pilot)
     metric_control = metric_estimator(groups.control)
     boostrap_samples = sample_bootstrapper(boostrap_size, groups)
-    sampled_metric_control = np.apply_along_axis(metric_estimator, axis=1, arr=boostrap_samples.control)
-    sampled_metric_pilot = np.apply_along_axis(metric_estimator, axis=1, arr=boostrap_samples.pilot)
+    if estimator_works_with_bootstrap_sample:
+        sampled_metric_control = metric_estimator(boostrap_samples.control)
+        sampled_metric_pilot = metric_estimator(boostrap_samples.pilot)
+    else:
+        sampled_metric_control = np.apply_along_axis(metric_estimator, axis=1, arr=boostrap_samples.control)
+        sampled_metric_pilot = np.apply_along_axis(metric_estimator, axis=1, arr=boostrap_samples.pilot)
     conf_interval_no_effect_test = get_ci_bootstrap_pivotal(
         bootstraped_estimations=sampled_metric_pilot - sampled_metric_control,
         pointwise_estimation=metric_pilot - metric_control,
