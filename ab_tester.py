@@ -130,6 +130,7 @@ def calculate_error_rates(
             sample_generator=sample_generator,
             n_iterations=n_experiment_runs_per_day_simulation,
             experiment_conductor=experiment_conductor,
+            verbose=verbose,
         )
         for n_days in days_range
     ]
@@ -152,9 +153,10 @@ def measure_error_rate(
         sample_generator: TSampleGenerator,
         experiment_conductor: TExperimentConductor,
         n_iterations: int = 250,
+        verbose: bool = False,
 ) -> TestErrors:
     test_errors = TestErrors()
-    for _ in range(n_iterations):
+    for _ in trange(n_iterations, leave=False) if verbose else range(n_iterations):
         groups = sample_generator(n_days, sample_params)
         experiment_results = experiment_conductor(groups, effect)
         test_errors += experiment_results.get_test_errors()
