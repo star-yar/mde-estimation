@@ -1,10 +1,12 @@
 from __future__ import annotations
 from abc import ABC
+from pathlib import Path
 import typing as tp
 from dataclasses import dataclass
 
 import numpy as np
 from tqdm.auto import trange
+from joblib import Parallel, delayed
 
 
 @dataclass
@@ -29,6 +31,7 @@ class Groups:
 
 TMetricEstimator = tp.Callable[[np.ndarray], float]
 TSampleGenerator = tp.Callable[[int, SampleParams], Groups]
+TSampleBootstraper = tp.Callable[[int, Groups], Groups]
 
 
 @dataclass
@@ -71,7 +74,11 @@ class TestErrors:
         )
 
     def __repr__(self) -> str:
-        return f"FP: {self.n_false_positive}, FN: {self.n_false_negative}"
+        return (
+            f"FP: {self.n_false_positive}, "
+            f"FN: {self.n_false_negative}, "
+            f"total: {self.total_rate}"
+        )
 
 
 @dataclass
@@ -122,18 +129,20 @@ def calculate_error_rates(
         experiment_conductor = conduct_experiments_using_bootstrap
 
     days_range = trange(1, max_days + 1) if verbose else range(1, max_days + 1)
-    return [
-        measure_error_rate(
-            n_days=n_days,
-            effect=effect,
-            sample_params=sample_params,
-            sample_generator=sample_generator,
-            n_iterations=n_experiment_runs_per_day_simulation,
-            experiment_conductor=experiment_conductor,
-            verbose=verbose,
+    error_rates = []
+    for n_days in days_range:
+        error_rates.append(
+            measure_error_rate(
+                n_days=n_days,
+                effect=effect,
+                sample_params=sample_params,
+                sample_generator=sample_generator,
+                n_iterations=n_experiment_runs_per_day_simulation,
+                experiment_conductor=experiment_conductor,
+                verbose=verbose,
+            )
         )
-        for n_days in days_range
-    ]
+    return error_rates
 
 
 def get_groups_for_normal_with_constant_users_per_day_rate(
@@ -154,16 +163,27 @@ def measure_error_rate(
         experiment_conductor: TExperimentConductor,
         n_iterations: int = 250,
         verbose: bool = False,
+        n_jobs: int = -1,
 ) -> TestErrors:
-    test_errors = TestErrors()
-    for _ in trange(n_iterations, leave=False) if verbose else range(n_iterations):
-        groups = sample_generator(n_days, sample_params)
-        experiment_results = experiment_conductor(groups, effect)
-        test_errors += experiment_results.get_test_errors()
-    return test_errors
+    test_errors = Parallel(n_jobs=n_jobs)(
+        delayed(_measure_one_error)(
+            effect, experiment_conductor, n_days, sample_generator, sample_params,
+        )
+        for _ in (trange(n_iterations, leave=False) if verbose else range(n_iterations))
+    )
+    return sum(test_errors, TestErrors())
 
 
-TSampleBootstraper = tp.Callable[[int, Groups], Groups]
+def _measure_one_error(
+        effect: Effect,
+        experiment_conductor: TExperimentConductor,
+        n_days: int,
+        sample_generator: TSampleGenerator,
+        sample_params: SampleParams,
+) -> TestErrors:
+    groups = sample_generator(n_days, sample_params)
+    experiment_results = experiment_conductor(groups, effect)
+    return experiment_results.get_test_errors()
 
 
 def conduct_experiments_using_bootstrap(
@@ -261,12 +281,13 @@ if __name__ == '__main__':
     experiment = dict(
         effect=Effect(0.1, is_additive=False),
         max_days=30,
+        _sample_params=NormalDistributionWithConstantRateSampleParams(
+            mean=100, std=10, n_users_per_day=10,
+        ),
     )
     experiment['error_rates'] = calculate_error_rates(
         effect=experiment['effect'],
-        sample_params=NormalDistributionWithConstantRateSampleParams(
-            mean=100, std=10, n_users_per_day=10,
-        ),
+        sample_params=experiment['sample_params'],
         sample_generator=get_groups_for_normal_with_constant_users_per_day_rate,
         max_days=experiment['max_days'],
         verbose=True,
