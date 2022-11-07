@@ -1,16 +1,19 @@
 from __future__ import annotations
 from abc import ABC
+from functools import partial
 from pathlib import Path
 import typing as tp
 from dataclasses import dataclass
 from logging import getLogger
 
 import numpy as np
+import pandas as pd
 from tqdm.auto import trange
 from joblib import Parallel, delayed
 
-
 logger = getLogger(__file__)
+
+Vector = tp.Union[tp.List[tp.Union[int, float]], np.ndarray, pd.Series]
 
 
 @dataclass
@@ -27,15 +30,28 @@ class SampleParams(ABC):
     pass
 
 
+TGroupSample = tp.TypeVar('TGroupSample', tp.Mapping[str, Vector], Vector)
+
+
 @dataclass
-class Groups:
-    control: np.ndarray
-    pilot: np.ndarray
+class Groups(tp.Generic[TGroupSample]):
+    control: TGroupSample
+    pilot: TGroupSample
 
 
-TMetricEstimator = tp.Callable[[np.ndarray], float]
-TSampleGenerator = tp.Callable[[int, SampleParams], Groups]
-TSampleBootstraper = tp.Callable[[int, Groups], Groups]
+class MetricEstimator:
+    def __call__(self, sample: TGroupSample, axis: int = 0) -> tp.Union[float, np.ndarray]:
+        ...
+
+
+class SampleGenerator(tp.Protocol):
+    def __call__(self, sample_size: int, sample_params: SampleParams) -> Groups:
+        ...
+
+
+class SampleBootstraper(tp.Protocol):
+    def __call__(self, bootstrap_size: int, groups: Groups) -> Groups:
+        ...
 
 
 @dataclass
@@ -105,16 +121,18 @@ class FoundEffect:
         )
 
 
-TExperimentConductor = tp.Callable[[Groups, Effect], FoundEffect]
+class ExperimentConductor(tp.Protocol):
+    def __call__(self, groups: Groups, effect: Effect) -> FoundEffect:
+        ...
 
 
 def calculate_error_rates(
         effect: Effect,
         sample_params: SampleParams,
-        sample_generator: TSampleGenerator,
+        sample_generator: SampleGenerator,
         max_days: int = 30,
         n_experiment_runs_per_day_simulation: int = 250,
-        experiment_conductor: TExperimentConductor = None,
+        experiment_conductor: ExperimentConductor = None,
         verbose: bool = False,
 ) -> tp.List[TestErrors]:
     """Returns error rates based on duration from 1 to max_days
@@ -153,7 +171,7 @@ def calculate_error_rates(
 
 def get_groups_for_normal_with_constant_users_per_day_rate(
         n_days: int, sample_params: NormalDistributionWithConstantRateSampleParams,
-) -> Groups:
+) -> Groups[np.ndarray]:
     sample_size = sample_params.n_users_per_day * n_days
     return Groups(
         np.random.normal(sample_params.mean, sample_params.std, size=sample_size),
@@ -165,8 +183,8 @@ def measure_error_rate(
         n_days: int,
         effect: Effect,
         sample_params: SampleParams,
-        sample_generator: TSampleGenerator,
-        experiment_conductor: TExperimentConductor,
+        sample_generator: SampleGenerator,
+        experiment_conductor: ExperimentConductor,
         n_iterations: int = 250,
         verbose: bool = False,
         n_jobs: int = -1,
@@ -182,9 +200,9 @@ def measure_error_rate(
 
 def _measure_one_error(
         effect: Effect,
-        experiment_conductor: TExperimentConductor,
+        experiment_conductor: ExperimentConductor,
         n_days: int,
-        sample_generator: TSampleGenerator,
+        sample_generator: SampleGenerator,
         sample_params: SampleParams,
 ) -> TestErrors:
     groups = sample_generator(n_days, sample_params)
@@ -193,35 +211,23 @@ def _measure_one_error(
 
 
 def conduct_experiments_using_bootstrap(
-        groups: Groups,
+        groups: Groups[tp.Any],
         effect: Effect,
-        metric_estimator: TMetricEstimator = np.mean,
         boostrap_size: int = 1000,
-        sample_bootstrapper: TSampleBootstraper = None,
-        estimator_works_with_bootstrap_sample: bool = False,
+        metric_estimator: tp.Optional[MetricEstimator] = None,
+        sample_bootstrapper: tp.Optional[SampleBootstraper] = None,
 ) -> FoundEffect:
-    """
-    Args:
-        groups: pilot & control samples to use for estimation
-        effect:
-        metric_estimator:
-        boostrap_size:
-        sample_bootstrapper:
-        estimator_works_with_bootstrap_sample:
-            just call `metric_estimator` if true,
-            use `metric_estimator` with `np.apply_along_axis` otherwise
-    """
+    if metric_estimator is None:
+        metric_estimator = partial(np.mean, axis=0)
     if sample_bootstrapper is None:
         sample_bootstrapper = bootstrap_samples
     metric_pilot = metric_estimator(groups.pilot)
     metric_control = metric_estimator(groups.control)
     boostrap_samples = sample_bootstrapper(boostrap_size, groups)
-    if estimator_works_with_bootstrap_sample:
-        sampled_metric_control = metric_estimator(boostrap_samples.control)
-        sampled_metric_pilot = metric_estimator(boostrap_samples.pilot)
-    else:
-        sampled_metric_control = np.apply_along_axis(metric_estimator, axis=1, arr=boostrap_samples.control)
-        sampled_metric_pilot = np.apply_along_axis(metric_estimator, axis=1, arr=boostrap_samples.pilot)
+    sampled_metric_control = metric_estimator(boostrap_samples.control)
+    assert len(sampled_metric_control) == boostrap_size
+    sampled_metric_pilot = metric_estimator(boostrap_samples.pilot)
+    assert len(sampled_metric_pilot) == boostrap_size
     conf_interval_no_effect_test = get_ci_bootstrap_pivotal(
         bootstraped_estimations=sampled_metric_pilot - sampled_metric_control,
         pointwise_estimation=metric_pilot - metric_control,
@@ -236,10 +242,10 @@ def conduct_experiments_using_bootstrap(
     )
 
 
-def bootstrap_samples(boostrap_size: int, groups: Groups) -> Groups:
+def bootstrap_samples(boostrap_size: int, groups: Groups[Vector]) -> Groups[Vector]:
     return Groups(
-        np.random.choice(groups.control, (boostrap_size, groups.control.size)),
-        np.random.choice(groups.pilot, (boostrap_size, groups.pilot.size)),
+        np.random.choice(groups.control, (groups.control.size, boostrap_size)),
+        np.random.choice(groups.pilot, (groups.pilot.size, boostrap_size)),
     )
 
 
@@ -287,7 +293,7 @@ if __name__ == '__main__':
     experiment = dict(
         effect=Effect(0.1, is_additive=False),
         max_days=30,
-        _sample_params=NormalDistributionWithConstantRateSampleParams(
+        sample_params=NormalDistributionWithConstantRateSampleParams(
             mean=100, std=10, n_users_per_day=10,
         ),
     )
