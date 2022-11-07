@@ -3,10 +3,14 @@ from abc import ABC
 from pathlib import Path
 import typing as tp
 from dataclasses import dataclass
+from logging import getLogger
 
 import numpy as np
 from tqdm.auto import trange
 from joblib import Parallel, delayed
+
+
+logger = getLogger(__file__)
 
 
 @dataclass
@@ -142,6 +146,8 @@ def calculate_error_rates(
                 verbose=verbose,
             )
         )
+        if verbose:
+            logger.info(f'Current error rates estimation: {error_rates}.')
     return error_rates
 
 
