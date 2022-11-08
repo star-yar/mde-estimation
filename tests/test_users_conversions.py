@@ -4,6 +4,7 @@ import pytest
 from btech_experiment.data_sampler import (
     HistoricBasedSampleParams,
     HistoricalUsersConversionsSampler,
+    StratifiedUserConversions,
     UsersConversionsBootstrap,
     eval_strats_weights,
 )
@@ -11,6 +12,18 @@ from duration_estimator import Effect
 
 
 class TestUserConversionsCase:
+    @pytest.fixture
+    def sample_params(self) -> HistoricBasedSampleParams:
+        return HistoricBasedSampleParams(0.5, 0.2)
+
+    @pytest.fixture
+    def groups(
+            self,
+            sampler: HistoricalUsersConversionsSampler,
+            sample_params: HistoricBasedSampleParams,
+    ) -> StratifiedUserConversions:
+        return sampler(n_days=1, sample_params=sample_params)
+
     @pytest.fixture
     def strats_weights(self, df_daily_users: pd.DataFrame) -> pd.Series:
         return eval_strats_weights(df_daily_users)
@@ -24,33 +37,32 @@ class TestUserConversionsCase:
         return HistoricalUsersConversionsSampler(df_daily_users, df_user_sessions)
 
     def test_sampling(
-            self, sampler: HistoricalUsersConversionsSampler,
+            self,
+            groups: StratifiedUserConversions,
     ) -> None:
-        groups = sampler(n_days=1, sample_params=HistoricBasedSampleParams(0.15, 0.2))
         assert 'ANDROID' in groups.pilot.keys()
         assert 'IOS' in groups.pilot.keys()
-        assert groups.pilot['ANDROID'].shape == (2073,)
-        assert groups.pilot['IOS'].shape == (418,)
+        assert groups.pilot['ANDROID'].shape == (10,)
+        assert groups.pilot['IOS'].shape == (5,)
 
     def test_evaluating_metric_on_initial_sample(
             self,
-            sampler: HistoricalUsersConversionsSampler,
             strats_weights: pd.Series,
-    ) -> None:
-        groups = sampler(n_days=1, sample_params=HistoricBasedSampleParams(0.15, 0.2))
+            groups: StratifiedUserConversions,
 
-        # test metric on initial sample
-        metrics = UsersConversionsBootstrap.estimate_metric(groups, strats_weights=strats_weights)
+    ) -> None:
+        metrics = UsersConversionsBootstrap.estimate_metric(
+            groups, strats_weights=strats_weights,
+        )
         assert isinstance(metrics.pilot, float)
         assert isinstance(metrics.control, float)
 
     def test_bootstrapping_sample(
             self,
             sampler: HistoricalUsersConversionsSampler,
-    ) -> None:
-        groups = sampler(n_days=1, sample_params=HistoricBasedSampleParams(0.15, 0.2))
+            groups: StratifiedUserConversions,
 
-        # test bootstrapping
+    ) -> None:
         bootstrapped_samples = UsersConversionsBootstrap.bootstrap_sample(5, groups)
         assert 'ANDROID' in groups.pilot.keys()
         assert 'IOS' in groups.pilot.keys()
@@ -65,12 +77,11 @@ class TestUserConversionsCase:
 
     def test_evaluating_metric_on_bootstrapped_sample(
             self,
-            sampler: HistoricalUsersConversionsSampler,
             strats_weights: pd.Series,
-    ) -> None:
-        groups = sampler(n_days=1, sample_params=HistoricBasedSampleParams(0.15, 0.2))
-        bootstrapped_samples = UsersConversionsBootstrap.bootstrap_sample(5, groups)
+            groups: StratifiedUserConversions,
 
+    ) -> None:
+        bootstrapped_samples = UsersConversionsBootstrap.bootstrap_sample(5, groups)
         boot_metric = UsersConversionsBootstrap.estimate_metric(
             bootstrapped_samples, strats_weights=strats_weights,
         )
@@ -78,11 +89,11 @@ class TestUserConversionsCase:
 
     def test_end_to_end(
             self,
-            sampler: HistoricalUsersConversionsSampler,
             strats_weights: pd.Series,
-    ) -> None:
-        groups = sampler(n_days=1, sample_params=HistoricBasedSampleParams(0.15, 0.2))
+            groups: StratifiedUserConversions,
 
-        found_effect = UsersConversionsBootstrap(strats_weights)(groups, Effect(1.0, is_additive=False))
+    ) -> None:
+        boot = UsersConversionsBootstrap(strats_weights)
+        found_effect = boot(groups, Effect(1000.0, is_additive=True))
         assert found_effect.given_effect
         assert not found_effect.given_no_effect
