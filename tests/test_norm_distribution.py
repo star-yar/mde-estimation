@@ -1,28 +1,11 @@
-import typing as tp
-
-import numpy as np
-
 from duration_estimator import (
-    Effect, ExperimentDurationEstimator, Groups, TSingleGroup,
+    Effect, ExperimentDurationEstimator,
 )
-from duration_estimator.experiment_conductors.bootstrap import ConductUsingBootstrap
+from duration_estimator.experiment_conductors.bootstrap import BootstrapForMeans
 from duration_estimator.sample_generators.normal_distribution import (
     NormalWithConstantRateSampleParams,
     get_groups_from_normal_with_constant_new_users_rate,
 )
-
-
-class BootstrapForMeans(ConductUsingBootstrap):
-    @staticmethod
-    def metric_estimator(sample: TSingleGroup, axis: int = 0) -> tp.Union[float, np.ndarray]:
-        return np.mean(sample, axis=axis)
-
-    @staticmethod
-    def sample_bootstrapper(bootstrap_size: int, groups: Groups) -> Groups:
-        return Groups(
-            np.random.choice(groups.control, (groups.control.size, bootstrap_size)),
-            np.random.choice(groups.pilot, (groups.pilot.size, bootstrap_size)),
-        )
 
 
 def test_normal_distribution_duration_is_correct():
