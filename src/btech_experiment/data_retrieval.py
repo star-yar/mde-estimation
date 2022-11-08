@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date
 import typing as tp
 
 from google.oauth2 import service_account

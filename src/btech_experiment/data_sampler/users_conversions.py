@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from btech_experiment.historical_data_sampler import HistoricBasedSampleParams, StratifiedGroups
+from .historical_data_sampler import HistoricBasedSampleParams, StratifiedGroups
 
 
 def sample_user_conversions_from_user_sessions(
