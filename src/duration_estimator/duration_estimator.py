@@ -13,7 +13,13 @@ from tqdm.auto import trange
 logger = getLogger(__file__)
 
 Vector = tp.Union[tp.List[tp.Union[int, float]], np.ndarray, pd.Series]
-TSingleGroup = tp.TypeVar('TSingleGroup', tp.Mapping[str, Vector], Vector)
+T = tp.TypeVar('T')
+
+
+@dataclass
+class Groups(tp.Generic[T]):
+    control: T
+    pilot: T
 
 
 class ExperimentConductor(tp.Protocol):
@@ -38,12 +44,6 @@ class Effect:
 @dataclass
 class SampleParams(ABC):
     pass
-
-
-@dataclass
-class Groups(tp.Generic[TSingleGroup]):
-    control: TSingleGroup
-    pilot: TSingleGroup
 
 
 @dataclass
