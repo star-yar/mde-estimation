@@ -21,17 +21,17 @@ class GroupsSizes(Groups[int]):
 @dataclass
 class HistoricBasedSampleParams(SampleParams):
     share_of_all_users: float
-    share_of_samlpe_for_pilot: float
+    share_of_sample_for_pilot: float
 
     @property
-    def share_of_samlpe_for_control(self) -> float:
-        return 1 - self.share_of_samlpe_for_pilot
+    def share_of_sample_for_control(self) -> float:
+        return 1 - self.share_of_sample_for_pilot
 
     def get_groups_sizes(
             self, experiment_sample_size: tp.Union[int, pd.Series],
     ) -> GroupsSizes:
         pilot_size = np.floor(
-            self.share_of_samlpe_for_pilot
+            self.share_of_sample_for_pilot
             * experiment_sample_size
         )
         pilot_size = (
@@ -64,15 +64,6 @@ class HistoricBasedSampleParams(SampleParams):
 
 
 class HistoricalDataSampler(tp.Generic[T]):
-    @staticmethod
-    @abstractmethod
-    def _sample(
-            df_user_sessions: pd.DataFrame,
-            n_unique_users_for_period: pd.Series,
-            sample_params: HistoricBasedSampleParams,
-    ) -> StratifiedGroups:
-        pass
-
     def __init__(
             self,
             df_daily_users: pd.DataFrame,
@@ -82,6 +73,15 @@ class HistoricalDataSampler(tp.Generic[T]):
         self.df_user_sessions = df_user_sessions
         self.df_daily_users = df_daily_users
         self.sampler_kwargs = sampler_kwargs
+
+    @staticmethod
+    @abstractmethod
+    def _sample(
+            df_user_sessions: pd.DataFrame,
+            n_unique_users_for_period: pd.Series,
+            sample_params: HistoricBasedSampleParams,
+    ) -> StratifiedGroups:
+        pass
 
     @staticmethod
     def _get_n_unique_users_for_period(

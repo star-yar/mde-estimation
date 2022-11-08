@@ -23,12 +23,12 @@ class Groups(tp.Generic[T]):
 
 
 class ExperimentConductor(tp.Protocol):
-    def __call__(self, groups: Groups, effect: Effect) -> FoundEffect:
+    def __call__(self, groups: Groups[tp.Any], effect: Effect) -> FoundEffect:
         ...
 
 
 class SampleGenerator(tp.Protocol):
-    def __call__(self, sample_size: int, sample_params: SampleParams) -> Groups:
+    def __call__(self, n_days: int, sample_params: SampleParams) -> Groups[tp.Any]:
         ...
 
 
