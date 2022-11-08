@@ -144,7 +144,7 @@ class ExperimentDurationEstimator:
 
     def fit(
             self,
-            n_experiment_runs_per_day_simulation: int = 250,
+            n_experiment_runs_per_day_simulation: int = 100,
             verbose: bool = False,
     ) -> ExperimentDurationEstimator:
         """Returns error rates based on duration from 1 to max_days
