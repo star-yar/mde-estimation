@@ -8,7 +8,7 @@ import numpy as np
 
 from ..duration_estimator import Effect, FoundEffect, Groups
 
-TSample = tp.TypeVar('TSample')
+TSample = tp.TypeVar('_TSample')
 
 
 @dataclass

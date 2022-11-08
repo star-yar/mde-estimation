@@ -6,11 +6,11 @@ import pandas as pd
 from duration_estimator.experiment_conductors import Bootstrap
 from .historical_data_sampler import HistoricBasedSampleParams, HistoricalDataSampler, StratifiedGroups
 
-TSample = np.ndarray
-StratifiedUserConversions = StratifiedGroups[TSample]
+_TSample = np.ndarray
+StratifiedUserConversions = StratifiedGroups[_TSample]
 
 
-class HistoricalUsersConversionsSampler(HistoricalDataSampler[TSample]):
+class HistoricalUsersConversionsSampler(HistoricalDataSampler[_TSample]):
     @staticmethod
     def _sample(
             df_user_sessions: pd.DataFrame,
@@ -41,7 +41,7 @@ class HistoricalUsersConversionsSampler(HistoricalDataSampler[TSample]):
         )
 
 
-class SessionsBootstrap(Bootstrap[TSample]):
+class UsersConversionsBootstrap(Bootstrap[_TSample]):
     def __init__(
             self,
             strats_weights: tp.Mapping[str, float],
@@ -49,21 +49,6 @@ class SessionsBootstrap(Bootstrap[TSample]):
     ) -> None:
         super().__init__(**kwargs)
         self._metric_kwargs["strats_weights"] = strats_weights
-
-    @staticmethod
-    def _estimate_metric(
-            group: tp.Mapping[str, np.ndarray],
-            strats_weights: tp.Mapping[str, float],
-            sample_size_axis: int,
-    ) -> float:
-        group_mean = {
-            strata: np.mean(data, axis=sample_size_axis)
-            for strata, data in group.items()
-        }
-        return sum(
-            group_weight * group_mean[group_id]
-            for group_id, group_weight in strats_weights.items()
-        )
 
     @staticmethod
     def estimate_metric(
@@ -74,8 +59,8 @@ class SessionsBootstrap(Bootstrap[TSample]):
         if strats_weights is None:
             raise ValueError('Please provide `strats_weights`')
         return StratifiedUserConversions(
-            pilot=SessionsBootstrap._estimate_metric(groups.pilot, strats_weights, sample_size_axis),
-            control=SessionsBootstrap._estimate_metric(groups.control, strats_weights, sample_size_axis),
+            pilot=_estimate_metric(groups.pilot, strats_weights, sample_size_axis),
+            control=_estimate_metric(groups.control, strats_weights, sample_size_axis),
         )
 
     @staticmethod
@@ -92,3 +77,18 @@ class SessionsBootstrap(Bootstrap[TSample]):
                 lambda x: np.random.choice(x, (x.size, bootstrap_size))
             ),
         )
+
+
+def _estimate_metric(
+        group: tp.Mapping[str, _TSample],
+        strats_weights: tp.Mapping[str, float],
+        sample_size_axis: int,
+) -> float:
+    group_mean = {
+        strata: np.mean(data, axis=sample_size_axis)
+        for strata, data in group.items()
+    }
+    return sum(
+        group_weight * group_mean[group_id]
+        for group_id, group_weight in strats_weights.items()
+    )

@@ -4,13 +4,13 @@ import pytest
 from btech_experiment.data_sampler import (
     HistoricBasedSampleParams,
     HistoricalUsersConversionsSampler,
-    SessionsBootstrap,
+    UsersConversionsBootstrap,
     eval_strats_weights,
 )
 from duration_estimator import Effect
 
 
-class TestUserSessionsCase:
+class TestUserConversionsCase:
     @pytest.fixture
     def strats_weights(self, df_daily_users: pd.DataFrame) -> pd.Series:
         return eval_strats_weights(df_daily_users)
@@ -40,7 +40,7 @@ class TestUserSessionsCase:
         groups = sampler(n_days=1, sample_params=HistoricBasedSampleParams(0.15, 0.2))
 
         # test metric on initial sample
-        metrics = SessionsBootstrap.estimate_metric(groups, strats_weights=strats_weights)
+        metrics = UsersConversionsBootstrap.estimate_metric(groups, strats_weights=strats_weights)
         assert isinstance(metrics.pilot, float)
         assert isinstance(metrics.control, float)
 
@@ -51,7 +51,7 @@ class TestUserSessionsCase:
         groups = sampler(n_days=1, sample_params=HistoricBasedSampleParams(0.15, 0.2))
 
         # test bootstrapping
-        bootstrapped_samples = SessionsBootstrap.bootstrap_sample(5, groups)
+        bootstrapped_samples = UsersConversionsBootstrap.bootstrap_sample(5, groups)
         assert 'ANDROID' in groups.pilot.keys()
         assert 'IOS' in groups.pilot.keys()
         assert (
@@ -69,9 +69,9 @@ class TestUserSessionsCase:
             strats_weights: pd.Series,
     ) -> None:
         groups = sampler(n_days=1, sample_params=HistoricBasedSampleParams(0.15, 0.2))
-        bootstrapped_samples = SessionsBootstrap.bootstrap_sample(5, groups)
+        bootstrapped_samples = UsersConversionsBootstrap.bootstrap_sample(5, groups)
 
-        boot_metric = SessionsBootstrap.estimate_metric(
+        boot_metric = UsersConversionsBootstrap.estimate_metric(
             bootstrapped_samples, strats_weights=strats_weights,
         )
         assert len(boot_metric.pilot) == 5
@@ -83,6 +83,6 @@ class TestUserSessionsCase:
     ) -> None:
         groups = sampler(n_days=1, sample_params=HistoricBasedSampleParams(0.15, 0.2))
 
-        found_effect = SessionsBootstrap(strats_weights)(groups, Effect(0.5, is_additive=False))
+        found_effect = UsersConversionsBootstrap(strats_weights)(groups, Effect(1.0, is_additive=False))
         assert found_effect.given_effect
         assert not found_effect.given_no_effect

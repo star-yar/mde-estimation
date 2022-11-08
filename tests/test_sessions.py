@@ -1,34 +1,88 @@
 import pandas as pd
+import pytest
 
 from btech_experiment.data_sampler import (
     HistoricBasedSampleParams,
+    HistoricalSessionsSampler,
     eval_strats_weights,
-    HistoricalDataSampler,
-    bootstrap_strata_conversions,
-    stratified_metric_estimator_for_sessions,
-    stratified_sample_bootstrapper_for_sessions,
+    SessionsBootstrap,
 )
+from duration_estimator import Effect
 
 
-def test_sampling_user_conversions(
-        df_daily_users: pd.DataFrame,
-        df_user_sessions: pd.DataFrame,
-) -> None:
-    sampler = HistoricalDataSampler(df_daily_users, df_user_sessions)
-    group = sampler(n_days=1, sample_params=HistoricBasedSampleParams(0.1, 0.2))
-    assert isinstance(
-        stratified_metric_estimator_for_sessions(
-            group.pilot, eval_strats_weights(df_daily_users),
-        ),
-        float,
-    )
-    assert (
-            bootstrap_strata_conversions(group.pilot['ANDROID'], 5).shape
-            == (group.pilot['ANDROID'].shape[0], 5, 2)
-    )
+class TestSessionsCase:
+    @pytest.fixture
+    def strats_weights(self, df_daily_users: pd.DataFrame) -> pd.Series:
+        return eval_strats_weights(df_daily_users)
 
-    # test on bootstrap
-    strat_wt = eval_strats_weights(df_daily_users)
-    strat_gr = stratified_sample_bootstrapper_for_sessions(100, group)
-    boot_metric = stratified_metric_estimator_for_sessions(strat_gr.pilot, strat_wt)
-    assert len(boot_metric) == 100
+    @pytest.fixture
+    def sampler(
+            self,
+            df_daily_users: pd.DataFrame,
+            df_user_sessions: pd.DataFrame,
+    ) -> HistoricalSessionsSampler:
+        return HistoricalSessionsSampler(df_daily_users, df_user_sessions)
+
+    def test_sampling(
+            self, sampler: HistoricalSessionsSampler,
+    ) -> None:
+        groups = sampler(n_days=1, sample_params=HistoricBasedSampleParams(0.15, 0.2))
+        assert 'ANDROID' in groups.pilot.keys()
+        assert 'IOS' in groups.pilot.keys()
+        assert groups.pilot['ANDROID'].shape == (2073, 2)
+        assert groups.pilot['IOS'].shape == (418, 2)
+
+    def test_evaluating_metric_on_initial_sample(
+            self,
+            sampler: HistoricalSessionsSampler,
+            strats_weights: pd.Series,
+    ) -> None:
+        groups = sampler(n_days=1, sample_params=HistoricBasedSampleParams(0.15, 0.2))
+
+        # test metric on initial sample
+        metrics = SessionsBootstrap.estimate_metric(groups, strats_weights=strats_weights)
+        assert isinstance(metrics.pilot, float)
+        assert isinstance(metrics.control, float)
+
+    def test_bootstrapping_sample(
+            self,
+            sampler: HistoricalSessionsSampler,
+    ) -> None:
+        groups = sampler(n_days=1, sample_params=HistoricBasedSampleParams(0.15, 0.2))
+
+        # test bootstrapping
+        bootstrapped_samples = SessionsBootstrap.bootstrap_sample(5, groups)
+        assert 'ANDROID' in groups.pilot.keys()
+        assert 'IOS' in groups.pilot.keys()
+        assert (
+                bootstrapped_samples.pilot['ANDROID'].shape
+                == (bootstrapped_samples.pilot['ANDROID'].shape[0], 5, 2)
+        )
+        assert (
+                bootstrapped_samples.pilot['IOS'].shape
+                == (bootstrapped_samples.pilot['IOS'].shape[0], 5, 2)
+        )
+
+    def test_evaluating_metric_on_bootstrapped_sample(
+            self,
+            sampler: HistoricalSessionsSampler,
+            strats_weights: pd.Series,
+    ) -> None:
+        groups = sampler(n_days=1, sample_params=HistoricBasedSampleParams(0.15, 0.2))
+        bootstrapped_samples = SessionsBootstrap.bootstrap_sample(5, groups)
+
+        boot_metric = SessionsBootstrap.estimate_metric(
+            bootstrapped_samples, strats_weights=strats_weights,
+        )
+        assert len(boot_metric.pilot) == 5
+
+    def test_end_to_end(
+            self,
+            sampler: HistoricalSessionsSampler,
+            strats_weights: pd.Series,
+    ) -> None:
+        groups = sampler(n_days=1, sample_params=HistoricBasedSampleParams(0.15, 0.2))
+
+        found_effect = SessionsBootstrap(strats_weights)(groups, Effect(1.0, is_additive=False))
+        assert found_effect.given_effect
+        assert not found_effect.given_no_effect
