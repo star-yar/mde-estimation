@@ -1,11 +1,14 @@
 from dataclasses import dataclass
+from datetime import timedelta
 import typing as tp
 
 import numpy as np
 import pandas as pd
 
-from btech_experiment.data_retrieval import _get_n_unique_users_for_period
 from duration_estimator import Groups, SampleParams, Vector
+
+NEW_USERS_COLUMN = 'new_users'
+STRATA_COLUMN = 'platform'
 
 
 class GroupsSizes(Groups[int]):
@@ -72,27 +75,41 @@ class Sampler(tp.Protocol):
         ...
 
 
-def sample_from_historical_data(
-        n_days: int,
-        sample_params: HistoricBasedSampleParams,
-        df_daily_users: pd.DataFrame,
-        df_user_sessions: pd.DataFrame,
-        sampler: Sampler,
-        **sampler_kwargs: tp.Any,
-) -> StratifiedGroups:
-    n_unique_users_for_period = _get_n_unique_users_for_period(
-        df_daily_users, n_days,
-    )
-    return sampler(
-        df_user_sessions,
-        n_unique_users_for_period,
-        sample_params,
-        **sampler_kwargs,
-    )
+class HistoricalDataSampler:
+    def __init__(
+            self,
+            sampler: Sampler,
+            df_daily_users: pd.DataFrame,
+            df_user_sessions: pd.DataFrame,
+            **sampler_kwargs: tp.Any,
+    ) -> None:
+        self.sampler = sampler
+        self.df_user_sessions = df_user_sessions
+        self.df_daily_users = df_daily_users
+        self.sampler_kwargs = sampler_kwargs
+
+    @staticmethod
+    def _get_n_unique_users_for_period(
+            df_daily_users: pd.DataFrame, n_days: int,
+    ) -> pd.Series:
+        starting_date = df_daily_users.index.min()
+        is_selected_day = df_daily_users.index == starting_date + timedelta(n_days - 1)
+        return df_daily_users[is_selected_day].set_index('platform')['unique_users_cumcount']
+
+    def __call__(self, n_days: int, sample_params: HistoricBasedSampleParams) -> StratifiedGroups:
+        n_unique_users_for_period = self._get_n_unique_users_for_period(
+            self.df_daily_users, n_days,
+        )
+        return self.sampler(
+            self.df_user_sessions,
+            n_unique_users_for_period,
+            sample_params,
+            **self.sampler_kwargs,
+        )
 
 
 def eval_strats_weights(df_daily_users: pd.DataFrame) -> pd.Series:
     return (
-            df_daily_users.groupby('platform')['new_users'].sum()
-            / df_daily_users['new_users'].sum()
+            df_daily_users.groupby(STRATA_COLUMN)[NEW_USERS_COLUMN].sum()
+            / df_daily_users[NEW_USERS_COLUMN].sum()
     )

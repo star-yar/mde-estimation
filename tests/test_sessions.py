@@ -1,8 +1,9 @@
 import pandas as pd
 
-from btech_experiment.custom import (
+from btech_experiment.historical_data_sampler import (
     HistoricBasedSampleParams,
-    eval_strats_weights, sample_from_historical_data,
+    eval_strats_weights,
+    HistoricalDataSampler,
 )
 from btech_experiment.sessions import (
     bootstrap_strata_conversions,
@@ -16,13 +17,12 @@ def test_sampling_user_conversions(
         df_daily_users: pd.DataFrame,
         df_user_sessions: pd.DataFrame,
 ) -> None:
-    group = sample_from_historical_data(
-        n_days=1,
-        sample_params=HistoricBasedSampleParams(0.1, 0.2),
-        df_daily_users=df_daily_users,
-        df_user_sessions=df_user_sessions,
-        sampler=sample_sessions_from_user_sessions,
+    sampler = HistoricalDataSampler(
+        sample_sessions_from_user_sessions,
+        df_daily_users,
+        df_user_sessions,
     )
+    group = sampler(n_days=1, sample_params=HistoricBasedSampleParams(0.1, 0.2))
     assert isinstance(
         stratified_metric_estimator_for_sessions(
             group.pilot, eval_strats_weights(df_daily_users),

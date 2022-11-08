@@ -110,12 +110,3 @@ def get_period(
     from_ = from_.strftime(date_fmt)
     to = to.strftime(date_fmt)
     return from_, to
-
-
-def _get_n_unique_users_for_period(
-        df_daily_users: pd.DataFrame, n_days: int,
-) -> pd.Series:
-    starting_date = df_daily_users.index.min()
-    return df_daily_users[
-        df_daily_users.index == starting_date + timedelta(n_days - 1)
-    ].set_index('platform')['unique_users_cumcount']

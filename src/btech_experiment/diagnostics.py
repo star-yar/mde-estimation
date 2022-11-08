@@ -3,7 +3,7 @@ import pandas as pd
 from plotly import express as px, graph_objects as go
 from plotly.subplots import make_subplots
 
-from btech_experiment.custom import HistoricBasedSampleParams
+from btech_experiment.historical_data_sampler import HistoricBasedSampleParams
 
 PLATFORM = 'platform'
 CONTROL = 'control'
