@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from logging import getLogger
 import typing as tp
 
@@ -125,6 +125,16 @@ class ExperimentDurationEstimator:
 
         self.experiment_conductor = experiment_conductor
         self.sample_generator = sample_generator
+
+    def __repr__(self) -> str:
+        return (
+            f'{type(self).__name__}\n'
+            f'effect: {asdict(self.effect)}\n'
+            f'sample_params: {asdict(self.sample_params)}\n'
+            f'max_days: {self.max_days}\n'
+            f'experiment_conductor: {type(self.experiment_conductor).__name__}\n'
+            f'sample_generator: {type(self.sample_generator).__name__}\n'
+        )
 
     @property
     def error_rates(self) -> tp.List[TestErrors]:
