@@ -5,14 +5,17 @@ import pandas as pd
 
 from .historical_data_sampler import HistoricBasedSampleParams, StratifiedGroups, HistoricalDataSampler
 
+TSample = pd.DataFrame
+StratifiedSessions = StratifiedGroups[TSample]
 
-class HistoricalUsersConversionsSampler(HistoricalDataSampler):
+
+class HistoricalSessionsSampler(HistoricalDataSampler[TSample]):
     @staticmethod
     def _sample(
             df_user_sessions: pd.DataFrame,
             n_unique_users_for_period: pd.Series,
             sample_params: HistoricBasedSampleParams,
-    ) -> StratifiedGroups:
+    ) -> StratifiedSessions:
         sample_pilot = {}
         sample_control = {}
         sample_sizes = sample_params.get_sample_size(n_unique_users_for_period)

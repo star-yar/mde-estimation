@@ -6,17 +6,15 @@ import typing as tp
 import numpy as np
 import pandas as pd
 
-from duration_estimator import Groups, SampleParams, Vector
+from duration_estimator import Groups, SampleParams
 
 NEW_USERS_COLUMN = 'new_users'
 STRATA_COLUMN = 'platform'
+T = tp.TypeVar('T')
+StratifiedGroups = Groups[tp.Mapping[str, T]]
 
 
 class GroupsSizes(Groups[int]):
-    pass
-
-
-class StratifiedGroups(Groups[tp.Mapping[str, Vector]]):
     pass
 
 
@@ -65,7 +63,7 @@ class HistoricBasedSampleParams(SampleParams):
         return self.get_groups_sizes(experiment_sample_size)
 
 
-class HistoricalDataSampler:
+class HistoricalDataSampler(tp.Generic[T]):
     @staticmethod
     @abstractmethod
     def _sample(

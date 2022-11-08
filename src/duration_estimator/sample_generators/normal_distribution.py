@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from duration_estimator import Groups, SampleParams
+from ..duration_estimator import Groups, SampleParams
 
 
 @dataclass

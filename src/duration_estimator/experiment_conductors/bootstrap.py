@@ -6,9 +6,9 @@ import typing as tp
 
 import numpy as np
 
-from duration_estimator import Effect, FoundEffect, Groups
+from ..duration_estimator import Effect, FoundEffect, Groups
 
-TSingleGroup = tp.TypeVar('TSingleGroup')
+TSample = tp.TypeVar('TSample')
 
 
 @dataclass
@@ -40,53 +40,49 @@ def get_ci_bootstrap_pivotal(
     )
 
 
-class Bootstrap(ABC):
+class Bootstrap(ABC, tp.Generic[TSample]):
+    def __init__(self, *args: tp.Any, **kwargs: tp.Any) -> None:
+        self._metric_kwargs = {}
+        self._bootstrap_sample_kwargs = {}
+
     @staticmethod
     @abstractmethod
-    def estimate_metric(sample: TSingleGroup, axis: int = 0) -> tp.Union[float, np.ndarray]:
+    def estimate_metric(
+            groups: Groups[TSample],
+            sample_size_axis: int = 0,
+            **metric_kwargs: tp.Any,
+    ) -> Groups[TSample]:
         pass
 
     @staticmethod
     @abstractmethod
-    def bootstrap_sample(bootstrap_size: int, groups: Groups) -> Groups:
+    def bootstrap_sample(
+            bootstrap_size: int,
+            groups: Groups[TSample],
+            **kwargs: tp.Any,
+    ) -> Groups[TSample]:
         pass
 
     def __call__(
             self,
-            groups: Groups[TSingleGroup],
+            groups: Groups[TSample],
             effect: Effect,
             boostrap_size: int = 1000,
     ) -> FoundEffect:
-        metric_pilot = self.estimate_metric(groups.pilot)
-        metric_control = self.estimate_metric(groups.control)
-        boostrap_samples = self.bootstrap_sample(boostrap_size, groups)
-        sampled_metric_control = self.estimate_metric(boostrap_samples.control)
-        assert len(sampled_metric_control) == boostrap_size
-        sampled_metric_pilot = self.estimate_metric(boostrap_samples.pilot)
-        assert len(sampled_metric_pilot) == boostrap_size
+        metrics = self.estimate_metric(groups, **self._metric_kwargs)
+        boostrap_samples = self.bootstrap_sample(boostrap_size, groups, **self._bootstrap_sample_kwargs)
+        sampled_metrics = self.estimate_metric(boostrap_samples, **self._metric_kwargs)
+        assert len(sampled_metrics.control) == boostrap_size
+        assert len(sampled_metrics.pilot) == boostrap_size
         conf_interval_no_effect_test = get_ci_bootstrap_pivotal(
-            bootstraped_estimations=sampled_metric_pilot - sampled_metric_control,
-            pointwise_estimation=metric_pilot - metric_control,
+            bootstraped_estimations=sampled_metrics.pilot - sampled_metrics.control,
+            pointwise_estimation=metrics.pilot - metrics.control,
         )
         conf_interval_injected_effect_test = get_ci_bootstrap_pivotal(
-            bootstraped_estimations=effect.inject(sampled_metric_pilot) - sampled_metric_control,
-            pointwise_estimation=effect.inject(metric_pilot) - metric_control,
+            bootstraped_estimations=effect.inject(sampled_metrics.pilot) - sampled_metrics.control,
+            pointwise_estimation=effect.inject(metrics.pilot) - metrics.control,
         )
         return FoundEffect(
             given_effect=not conf_interval_injected_effect_test.contains(0),
             given_no_effect=not conf_interval_no_effect_test.contains(0),
-        )
-
-
-class BootstrapForMeans(Bootstrap):
-    @staticmethod
-    def estimate_metric(sample: TSingleGroup, axis: int = 0) -> tp.Union[float, np.ndarray]:
-        return np.mean(sample, axis=axis)
-
-    @staticmethod
-    def bootstrap_sample(bootstrap_size: int, groups: Groups) -> Groups:
-        # todo: complete generic
-        return Groups(
-            np.random.choice(groups.control, (groups.control.size, bootstrap_size)),
-            np.random.choice(groups.pilot, (groups.pilot.size, bootstrap_size)),
         )

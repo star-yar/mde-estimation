@@ -1,7 +1,7 @@
 from duration_estimator import (
     Effect, ExperimentDurationEstimator,
 )
-from duration_estimator.experiment_conductors.bootstrap import BootstrapForMeans
+from duration_estimator.experiment_conductors import BootstrapForMeans
 from duration_estimator.sample_generators.normal_distribution import (
     NormalWithConstantRateSampleParams,
     get_groups_from_normal_with_constant_new_users_rate,
