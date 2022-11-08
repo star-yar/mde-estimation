@@ -4,7 +4,11 @@ import numpy as np
 import pandas as pd
 
 from duration_estimator.experiment_conductors import Bootstrap
-from .historical_data_sampler import HistoricBasedSampleParams, StratifiedGroups, HistoricalDataSampler
+from ..historical_data_sampler import (
+    HistoricBasedSampleParams,
+    StratifiedGroups,
+    HistoricalDataSampler,
+)
 
 _TSample = pd.DataFrame
 StratifiedSessions = StratifiedGroups[_TSample]

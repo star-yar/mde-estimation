@@ -6,6 +6,7 @@ from btech_experiment.data_retrieval import (
 
 def test_data_loads():
     df = get_data_from_query(
-        f'select * from {DATA_SOURCE_RAW_SESSIONS} limit 10'
+        f'select * from {DATA_SOURCE_RAW_SESSIONS} limit 10',
+        '../data/credentials.json',
     )
     assert not df.empty

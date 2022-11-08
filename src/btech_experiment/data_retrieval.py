@@ -7,17 +7,17 @@ import pandas_gbq
 
 TDate = tp.Union[str, date]
 
-CREDENTIALS = (
-    service_account
-    .Credentials
-    .from_service_account_file('../data/credentials.json')
-)
 DATA_SOURCE_RAW_SESSIONS = '`btech-dwh.ga_orbis_generaloverview.Sessions_raw_data`'
 
 
 def get_data_from_query(
-        query: str, credentials: service_account.Credentials = CREDENTIALS,
+        query: str, credentials_path: str,
 ) -> pd.DataFrame:
+    credentials = (
+        service_account
+        .Credentials
+        .from_service_account_file(credentials_path)
+    )
     return pandas_gbq.read_gbq(query, credentials=credentials)
 
 
