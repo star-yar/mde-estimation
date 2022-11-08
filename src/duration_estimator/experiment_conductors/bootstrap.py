@@ -43,12 +43,12 @@ def get_ci_bootstrap_pivotal(
 class Bootstrap(ABC):
     @staticmethod
     @abstractmethod
-    def metric_estimator(sample: TSingleGroup, axis: int = 0) -> tp.Union[float, np.ndarray]:
+    def estimate_metric(sample: TSingleGroup, axis: int = 0) -> tp.Union[float, np.ndarray]:
         pass
 
     @staticmethod
     @abstractmethod
-    def sample_bootstrapper(bootstrap_size: int, groups: Groups) -> Groups:
+    def bootstrap_sample(bootstrap_size: int, groups: Groups) -> Groups:
         pass
 
     def __call__(
@@ -57,12 +57,12 @@ class Bootstrap(ABC):
             effect: Effect,
             boostrap_size: int = 1000,
     ) -> FoundEffect:
-        metric_pilot = self.metric_estimator(groups.pilot)
-        metric_control = self.metric_estimator(groups.control)
-        boostrap_samples = self.sample_bootstrapper(boostrap_size, groups)
-        sampled_metric_control = self.metric_estimator(boostrap_samples.control)
+        metric_pilot = self.estimate_metric(groups.pilot)
+        metric_control = self.estimate_metric(groups.control)
+        boostrap_samples = self.bootstrap_sample(boostrap_size, groups)
+        sampled_metric_control = self.estimate_metric(boostrap_samples.control)
         assert len(sampled_metric_control) == boostrap_size
-        sampled_metric_pilot = self.metric_estimator(boostrap_samples.pilot)
+        sampled_metric_pilot = self.estimate_metric(boostrap_samples.pilot)
         assert len(sampled_metric_pilot) == boostrap_size
         conf_interval_no_effect_test = get_ci_bootstrap_pivotal(
             bootstraped_estimations=sampled_metric_pilot - sampled_metric_control,
@@ -80,11 +80,11 @@ class Bootstrap(ABC):
 
 class BootstrapForMeans(Bootstrap):
     @staticmethod
-    def metric_estimator(sample: TSingleGroup, axis: int = 0) -> tp.Union[float, np.ndarray]:
+    def estimate_metric(sample: TSingleGroup, axis: int = 0) -> tp.Union[float, np.ndarray]:
         return np.mean(sample, axis=axis)
 
     @staticmethod
-    def sample_bootstrapper(bootstrap_size: int, groups: Groups) -> Groups:
+    def bootstrap_sample(bootstrap_size: int, groups: Groups) -> Groups:
         # todo: complete generic
         return Groups(
             np.random.choice(groups.control, (groups.control.size, bootstrap_size)),

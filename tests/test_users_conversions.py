@@ -1,11 +1,9 @@
 import pandas as pd
 
-from btech_experiment.historical_data_sampler import (
+from btech_experiment.data_sampler import (
     HistoricBasedSampleParams,
     HistoricalDataSampler,
     eval_strats_weights,
-)
-from btech_experiment.users_conversions import (
     sample_user_conversions_from_user_sessions,
     stratified_metric_estimator_for_users,
     stratified_sample_bootstrapper_for_users,
@@ -33,7 +31,7 @@ def test_sampling_sessions(
         float,
     )
     assert (
-        BootstrapForMeans().sample_bootstrapper(5, group).pilot.shape == (2, 5)
+            BootstrapForMeans().bootstrap_sample(5, group).pilot.shape == (2, 5)
     )
 
     # test on bootstrap

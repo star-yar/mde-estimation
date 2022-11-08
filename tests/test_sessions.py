@@ -1,11 +1,9 @@
 import pandas as pd
 
-from btech_experiment.historical_data_sampler import (
+from btech_experiment.data_sampler import (
     HistoricBasedSampleParams,
     eval_strats_weights,
     HistoricalDataSampler,
-)
-from btech_experiment.sessions import (
     bootstrap_strata_conversions,
     sample_sessions_from_user_sessions,
     stratified_metric_estimator_for_sessions,
