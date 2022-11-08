@@ -6,7 +6,9 @@ import typing as tp
 
 import numpy as np
 
-from duration_estimator import Effect, FoundEffect, Groups, TSingleGroup
+from duration_estimator import Effect, FoundEffect, Groups
+
+TSingleGroup = tp.TypeVar('TSingleGroup')
 
 
 @dataclass
@@ -38,7 +40,7 @@ def get_ci_bootstrap_pivotal(
     )
 
 
-class ConductUsingBootstrap(ABC):
+class Bootstrap(ABC):
     @staticmethod
     @abstractmethod
     def metric_estimator(sample: TSingleGroup, axis: int = 0) -> tp.Union[float, np.ndarray]:
@@ -51,7 +53,7 @@ class ConductUsingBootstrap(ABC):
 
     def __call__(
             self,
-            groups: Groups[tp.Any],
+            groups: Groups[TSingleGroup],
             effect: Effect,
             boostrap_size: int = 1000,
     ) -> FoundEffect:
@@ -73,4 +75,18 @@ class ConductUsingBootstrap(ABC):
         return FoundEffect(
             given_effect=not conf_interval_injected_effect_test.contains(0),
             given_no_effect=not conf_interval_no_effect_test.contains(0),
+        )
+
+
+class BootstrapForMeans(Bootstrap):
+    @staticmethod
+    def metric_estimator(sample: TSingleGroup, axis: int = 0) -> tp.Union[float, np.ndarray]:
+        return np.mean(sample, axis=axis)
+
+    @staticmethod
+    def sample_bootstrapper(bootstrap_size: int, groups: Groups) -> Groups:
+        # todo: complete generic
+        return Groups(
+            np.random.choice(groups.control, (groups.control.size, bootstrap_size)),
+            np.random.choice(groups.pilot, (groups.pilot.size, bootstrap_size)),
         )
