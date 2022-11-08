@@ -1,34 +1,33 @@
 from btech_experiment import (
     HistoricBasedSampleParams,
     eval_strats_weights,
-)
-from btech_experiment.data_retrieval import (
     get_daily_users,
     get_period,
     get_user_sessions,
-)
-from btech_experiment.diagnostics import show_diagnostics
-from btech_experiment.estimators import (
+    show_diagnostics,
+    load_credentials,
     HistoricalUsersConversionsSampler,
     UsersConversionsBootstrap,
 )
 from duration_estimator import (
     Effect,
     ExperimentDurationEstimator,
+    save_experiment_result,
 )
-from duration_estimator.utils import save_experiment_result
 
 if __name__ == '__main__':
     VERBOSE = True
+    PATH_TO_CREDENTIALS = '../data/credentials.json'
+    # get historical period
     period = get_period(
-        # last_available_period_date='2021-12-01', n_month_from_last_date=1,
-        last_available_period_date='2022-10-01', n_month_from_last_date=1,
+        last_available_period_date='2022-10-01',
+        n_month_from_last_date=1,
     )
     print(f'{period = }')
-
     # load data
-    df_daily_users = get_daily_users(*period)
-    df_user_sessions = get_user_sessions(*period)
+    credentials = load_credentials(PATH_TO_CREDENTIALS)
+    df_daily_users = get_daily_users(*period, credentials)
+    df_user_sessions = get_user_sessions(*period, credentials)
 
     # experiment setup
     expected_effect = Effect(0.05, is_additive=False)
@@ -38,10 +37,8 @@ if __name__ == '__main__':
     )
     max_days = 30
     print(f'{sample_params = }')
-
     # diagnostics
     show_diagnostics(df_daily_users, sample_params)
-
     # components set up
     sample_generator = HistoricalUsersConversionsSampler(
         df_daily_users=df_daily_users,

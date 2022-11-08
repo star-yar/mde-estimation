@@ -1,6 +1,7 @@
 from datetime import date
 import typing as tp
 
+from google.auth.credentials import Credentials
 from google.oauth2 import service_account
 import pandas as pd
 import pandas_gbq
@@ -10,18 +11,21 @@ TDate = tp.Union[str, date]
 DATA_SOURCE_RAW_SESSIONS = '`btech-dwh.ga_orbis_generaloverview.Sessions_raw_data`'
 
 
-def get_data_from_query(
-        query: str, credentials_path: str,
-) -> pd.DataFrame:
-    credentials = (
+def load_credentials(path: str) -> Credentials:
+    return (
         service_account
         .Credentials
-        .from_service_account_file(credentials_path)
+        .from_service_account_file(path)
     )
+
+
+def get_data_from_query(
+        query: str, credentials: Credentials,
+) -> pd.DataFrame:
     return pandas_gbq.read_gbq(query, credentials=credentials)
 
 
-def get_daily_users(from_: TDate, to: TDate) -> pd.DataFrame:
+def get_daily_users(from_: TDate, to: TDate, credentials: Credentials) -> pd.DataFrame:
     df_daily_user_conversions = get_data_from_query(
         f"""
         with first_occurance as (
@@ -68,7 +72,8 @@ def get_daily_users(from_: TDate, to: TDate) -> pd.DataFrame:
         from additional_user_counts
         left join additional_user_conversion using(date_, platform)
         order by date_, platform
-        """
+        """,
+        credentials,
     )
     df_daily_user_conversions['date_'] = pd.to_datetime(
         df_daily_user_conversions['date_']
@@ -77,7 +82,7 @@ def get_daily_users(from_: TDate, to: TDate) -> pd.DataFrame:
     return df_daily_user_conversions
 
 
-def get_user_sessions(from_: TDate, to: TDate) -> pd.DataFrame:
+def get_user_sessions(from_: TDate, to: TDate, credentials: Credentials) -> pd.DataFrame:
     return get_data_from_query(
         f"""
         with per_user_sessions as (
@@ -96,7 +101,8 @@ def get_user_sessions(from_: TDate, to: TDate) -> pd.DataFrame:
         )
         select * 
         from per_user_sessions
-        """
+        """,
+        credentials,
     )
 
 
