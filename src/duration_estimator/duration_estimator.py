@@ -146,7 +146,7 @@ class ExperimentDurationEstimator:
             self,
             n_experiment_runs_per_day_simulation: int = 250,
             verbose: bool = False,
-    ) -> None:
+    ) -> ExperimentDurationEstimator:
         """Returns error rates based on duration from 1 to max_days
 
         Args:
@@ -165,6 +165,7 @@ class ExperimentDurationEstimator:
             )
             if verbose:
                 logger.info(f'Current error rates estimation: {self.error_rates}.')
+        return self
 
     def _measure_error_rate_for_given_duration(
             self,
