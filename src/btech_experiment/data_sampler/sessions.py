@@ -3,32 +3,34 @@ import typing as tp
 import numpy as np
 import pandas as pd
 
-from .historical_data_sampler import HistoricBasedSampleParams, StratifiedGroups
+from .historical_data_sampler import HistoricBasedSampleParams, StratifiedGroups, HistoricalDataSampler
 
 
-def sample_sessions_from_user_sessions(
-    df_user_sessions: pd.DataFrame,
-    n_unique_users_for_period: pd.Series,
-    sample_params: HistoricBasedSampleParams,
-) -> StratifiedGroups:
-    sample_pilot = {}
-    sample_control = {}
-    sample_sizes = sample_params.get_sample_size(n_unique_users_for_period)
-    for strata_name, strata_data in df_user_sessions.groupby('platform'):
-        strata_sample_size = sample_sizes[strata_name]
-        general_sample = (
-            strata_data[['sessions', 'conversions']]
-            .sample(strata_sample_size)
-        )
-        groups_sizes = sample_params.get_groups_sizes(strata_sample_size)
-        sample_pilot[strata_name] = general_sample.head(groups_sizes.pilot)
-        sample_control[strata_name] = general_sample.tail(groups_sizes.control)
-    return StratifiedGroups(pilot=pd.Series(sample_pilot), control=pd.Series(sample_control))
+class HistoricalUsersConversionsSampler(HistoricalDataSampler):
+    @staticmethod
+    def _sample(
+            df_user_sessions: pd.DataFrame,
+            n_unique_users_for_period: pd.Series,
+            sample_params: HistoricBasedSampleParams,
+    ) -> StratifiedGroups:
+        sample_pilot = {}
+        sample_control = {}
+        sample_sizes = sample_params.get_sample_size(n_unique_users_for_period)
+        for strata_name, strata_data in df_user_sessions.groupby('platform'):
+            strata_sample_size = sample_sizes[strata_name]
+            general_sample = (
+                strata_data[['sessions', 'conversions']]
+                .sample(strata_sample_size)
+            )
+            groups_sizes = sample_params.get_groups_sizes(strata_sample_size)
+            sample_pilot[strata_name] = general_sample.head(groups_sizes.pilot)
+            sample_control[strata_name] = general_sample.tail(groups_sizes.control)
+        return StratifiedGroups(pilot=pd.Series(sample_pilot), control=pd.Series(sample_control))
 
 
 def stratified_metric_estimator_for_sessions(
-    group: tp.Mapping[str, tp.Union[np.ndarray, pd.DataFrame]],
-    strats_weights: pd.Series,
+        group: tp.Mapping[str, tp.Union[np.ndarray, pd.DataFrame]],
+        strats_weights: pd.Series,
 ) -> float:
     group_mean = {
         strata_name: (
@@ -45,7 +47,7 @@ def stratified_metric_estimator_for_sessions(
 
 
 def bootstrap_strata_conversions(
-    strat_data: pd.DataFrame, bootstrap_size: int,
+        strat_data: pd.DataFrame, bootstrap_size: int,
 ) -> np.array:
     sample_size = strat_data.shape[0]
     sampled_strat = strat_data.sample(
@@ -59,7 +61,7 @@ def bootstrap_strata_conversions(
 
 
 def stratified_sample_bootstrapper_for_sessions(
-    boostrap_size: int, groups: StratifiedGroups,
+        boostrap_size: int, groups: StratifiedGroups,
 ) -> StratifiedGroups:
     return StratifiedGroups(
         control={

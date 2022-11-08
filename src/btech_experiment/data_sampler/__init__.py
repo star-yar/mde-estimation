@@ -1,11 +1,11 @@
 from .sessions import (
-    sample_sessions_from_user_sessions,
+    HistoricalUsersConversionsSampler,
     stratified_metric_estimator_for_sessions,
     stratified_sample_bootstrapper_for_sessions,
     bootstrap_strata_conversions,
 )
 from .users_conversions import (
-    sample_user_conversions_from_user_sessions,
+    HistoricalSessionsSampler,
     stratified_metric_estimator_for_users,
     stratified_sample_bootstrapper_for_users,
 )

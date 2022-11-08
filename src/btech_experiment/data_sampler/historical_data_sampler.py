@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from dataclasses import dataclass
 from datetime import timedelta
 import typing as tp
@@ -64,26 +65,22 @@ class HistoricBasedSampleParams(SampleParams):
         return self.get_groups_sizes(experiment_sample_size)
 
 
-class Sampler(tp.Protocol):
-    def __call__(
-            self,
+class HistoricalDataSampler:
+    @staticmethod
+    @abstractmethod
+    def _sample(
             df_user_sessions: pd.DataFrame,
             n_unique_users_for_period: pd.Series,
             sample_params: HistoricBasedSampleParams,
-            **kwargs: tp.Any,
     ) -> StratifiedGroups:
-        ...
+        pass
 
-
-class HistoricalDataSampler:
     def __init__(
             self,
-            sampler: Sampler,
             df_daily_users: pd.DataFrame,
             df_user_sessions: pd.DataFrame,
             **sampler_kwargs: tp.Any,
     ) -> None:
-        self.sampler = sampler
         self.df_user_sessions = df_user_sessions
         self.df_daily_users = df_daily_users
         self.sampler_kwargs = sampler_kwargs
@@ -100,11 +97,10 @@ class HistoricalDataSampler:
         n_unique_users_for_period = self._get_n_unique_users_for_period(
             self.df_daily_users, n_days,
         )
-        return self.sampler(
+        return self._sample(
             self.df_user_sessions,
             n_unique_users_for_period,
             sample_params,
-            **self.sampler_kwargs,
         )
 
 
