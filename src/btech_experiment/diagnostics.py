@@ -1,8 +1,11 @@
+import typing as tp
+
 import numpy as np
 import pandas as pd
 from plotly import express as px, graph_objects as go
 from plotly.subplots import make_subplots
 
+from duration_estimator import TestErrors
 from .historical_data_sampler import HistoricBasedSampleParams
 
 PLATFORM = 'platform'
@@ -95,3 +98,18 @@ def evaluate_experiment_data(
         .append(df_daily_user_conversions_total)
     )
     return df_daily_user_conversions_with_total
+
+
+def plot_error_rates(error_rates: tp.List[TestErrors]) -> None:
+    fig = px.line(
+        pd.DataFrame(
+            {
+                'days': np.arange(1, len(error_rates) + 1),
+                'total_error': [x.total_rate for x in error_rates],
+            },
+        ),
+        x='days',
+        y='total_error',
+        title='error level',
+    )
+    fig.show()

@@ -11,4 +11,4 @@ from .duration_estimator import (
     FoundEffect,
     ExperimentDurationEstimator,
 )
-from .utils import save_experiment_result
+from .utils import save_experiment_result, load_experiment_result

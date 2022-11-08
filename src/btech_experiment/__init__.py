@@ -12,5 +12,5 @@ from .data_retrieval import (
     get_period,
     load_credentials,
 )
-from .diagnostics import show_diagnostics
+from .diagnostics import show_diagnostics, plot_error_rates
 from .estimators import *
