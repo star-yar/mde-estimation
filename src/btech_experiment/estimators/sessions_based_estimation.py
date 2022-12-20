@@ -6,6 +6,7 @@ import pandas as pd
 from duration_estimator.experiment_conductors import Bootstrap
 from ..historical_data_sampler import (
     HistoricBasedSampleParams,
+    STRATA_COLUMN,
     StratifiedGroups,
     HistoricalDataSampler,
 )
@@ -24,7 +25,7 @@ class HistoricalSessionsSampler(HistoricalDataSampler[_TSample]):
         sample_pilot = {}
         sample_control = {}
         sample_sizes = sample_params.get_sample_size(n_unique_users_for_period)
-        for strata_name, strata_data in df_user_sessions.groupby('platform'):
+        for strata_name, strata_data in df_user_sessions.groupby(STRATA_COLUMN):
             strata_sample_size = sample_sizes[strata_name]
             general_sample = (
                 strata_data[['sessions', 'conversions']]

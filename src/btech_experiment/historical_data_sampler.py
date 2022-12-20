@@ -89,7 +89,7 @@ class HistoricalDataSampler(tp.Generic[T]):
     ) -> pd.Series:
         starting_date = df_daily_users.index.min()
         is_selected_day = df_daily_users.index == starting_date + timedelta(n_days - 1)
-        return df_daily_users[is_selected_day].set_index('platform')['unique_users_cumcount']
+        return df_daily_users[is_selected_day].set_index(STRATA_COLUMN)['unique_users_cumcount']
 
     def __call__(self, n_days: int, sample_params: HistoricBasedSampleParams) -> StratifiedGroups:
         n_unique_users_for_period = self._get_n_unique_users_for_period(
