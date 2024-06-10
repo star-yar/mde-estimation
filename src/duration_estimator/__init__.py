@@ -5,7 +5,6 @@ from .duration_estimator import (
     ExperimentConductor,
     SampleGenerator,
     Effect,
-    SampleParams,
     Groups,
     TestErrors,
     FoundEffect,

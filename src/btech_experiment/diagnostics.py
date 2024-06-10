@@ -6,7 +6,7 @@ from plotly import express as px, graph_objects as go
 from plotly.subplots import make_subplots
 
 from duration_estimator import TestErrors
-from .historical_data_sampler import HistoricBasedSampleParams
+from .historical_data_sampler import HistoricBasedSamplerParams
 
 PLATFORM = 'platform'
 CONTROL = 'control'
@@ -16,7 +16,7 @@ COLORS = px.colors.qualitative.T10
 
 def show_diagnostics(
     df_daily_users: pd.DataFrame,
-    sample_params: HistoricBasedSampleParams,
+    sample_params: HistoricBasedSamplerParams,
 ) -> None:
     experiment_data = evaluate_experiment_data(df_daily_users, sample_params)
 
@@ -70,7 +70,7 @@ def show_diagnostics(
 
 
 def evaluate_experiment_data(
-    df_daily_users: pd.DataFrame, sample_params: HistoricBasedSampleParams,
+    df_daily_users: pd.DataFrame, sample_params: HistoricBasedSamplerParams,
 ) -> pd.DataFrame:
     df_daily_users = df_daily_users.copy()
     get_size = lambda size_column, group_name: getattr(

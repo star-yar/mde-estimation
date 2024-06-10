@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from abc import ABC
 from dataclasses import asdict, dataclass
 from logging import getLogger
 import typing as tp
@@ -28,7 +27,7 @@ class ExperimentConductor(tp.Protocol):
 
 
 class SampleGenerator(tp.Protocol):
-    def __call__(self, n_days: int, sample_params: SampleParams) -> Groups[tp.Any]:
+    def __call__(self, n_days: int) -> Groups[tp.Any]:
         """Generates sample given the duration of an experiment and sample params"""
 
 
@@ -39,11 +38,6 @@ class Effect:
 
     def inject(self, metric: float) -> float:
         return metric + self.size if self.is_additive else metric * (1 + self.size)
-
-
-@dataclass
-class SampleParams(ABC):
-    pass
 
 
 @dataclass
@@ -103,7 +97,6 @@ class ExperimentDurationEstimator:
         expected_effect: Effect,
         experiment_conductor: ExperimentConductor,
         sample_generator: SampleGenerator,
-        sample_params: SampleParams,
         max_days: int = 30,
     ) -> None:
         """
@@ -116,13 +109,11 @@ class ExperimentDurationEstimator:
             experiment_conductor: defines how single experiment is conducted
             sample_generator: is used for generating sample for each duration of experiment
                 (do not confuse with generating samples during bootstrapping or else)
-            sample_params: params passed to `self.sample_generator`
             max_days: max experiment duration
         """
 
         self._error_rates = None
         self.expected_effect = expected_effect
-        self.sample_params = sample_params
         self.max_days = max_days
 
         self.experiment_conductor = experiment_conductor
@@ -132,7 +123,6 @@ class ExperimentDurationEstimator:
         return (
             f'{type(self).__name__}\n'
             f'effect: {asdict(self.expected_effect)}\n'
-            f'sample_params: {asdict(self.sample_params)}\n'
             f'max_days: {self.max_days}\n'
             f'experiment_conductor: {type(self.experiment_conductor).__name__}\n'
             f'sample_generator: {type(self.sample_generator).__name__}\n'
@@ -188,7 +178,7 @@ class ExperimentDurationEstimator:
         return sum(test_errors, TestErrors())
 
     def _measure_one_error(self, n_days: int) -> TestErrors:
-        groups = self.sample_generator(n_days, self.sample_params)
+        groups = self.sample_generator(n_days)
         experiment_results = self.experiment_conductor(groups, self.expected_effect)
         return experiment_results.to_test_errors()
 

@@ -36,7 +36,7 @@ classifiers = [
 [project.optional-dependencies]
 # todo
 dev = ["check-manifest"]
-test = ["coverage"]
+test = ["pytest", "coverage"]
 
 [project.urls]
 # todo

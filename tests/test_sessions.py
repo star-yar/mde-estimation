@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from btech_experiment import HistoricBasedSampleParams, eval_strats_weights
+from btech_experiment import HistoricBasedSamplerParams, eval_strats_weights
 from btech_experiment.estimators import (
     HistoricalSessionsSampler,
     SessionsBootstrap,
@@ -12,8 +12,8 @@ from duration_estimator import Effect
 
 class TestSessionsCase:
     @pytest.fixture
-    def sample_params(self) -> HistoricBasedSampleParams:
-        return HistoricBasedSampleParams(0.5, 0.2)
+    def sampler_params(self) -> HistoricBasedSamplerParams:
+        return HistoricBasedSamplerParams(0.5, 0.2)
 
     @pytest.fixture
     def strats_weights(self, df_daily_users: pd.DataFrame) -> pd.Series:
@@ -21,19 +21,20 @@ class TestSessionsCase:
 
     @pytest.fixture
     def groups(
-            self,
-            sampler: HistoricalSessionsSampler,
-            sample_params: HistoricBasedSampleParams,
+        self,
+        sampler: HistoricalSessionsSampler,
+        sampler_params: HistoricBasedSamplerParams,
     ) -> StratifiedSessions:
-        return sampler(n_days=1, sample_params=sample_params)
+        return sampler(n_days=1)
 
     @pytest.fixture
     def sampler(
-            self,
-            df_daily_users: pd.DataFrame,
-            df_user_sessions: pd.DataFrame,
+        self,
+        df_daily_users: pd.DataFrame,
+        df_user_sessions: pd.DataFrame,
+        sampler_params: HistoricBasedSamplerParams,
     ) -> HistoricalSessionsSampler:
-        return HistoricalSessionsSampler(df_daily_users, df_user_sessions)
+        return HistoricalSessionsSampler(df_daily_users, df_user_sessions, sampler_params)
 
     def test_sampling(self, groups: StratifiedSessions) -> None:
         assert 'ANDROID' in groups.pilot.keys()

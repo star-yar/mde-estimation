@@ -6,7 +6,7 @@ import typing as tp
 import numpy as np
 import pandas as pd
 
-from duration_estimator import Groups, SampleParams
+from duration_estimator import Groups
 
 NEW_USERS_COLUMN = 'new_users'
 STRATA_COLUMN = 'platform'
@@ -19,7 +19,7 @@ class GroupsSizes(Groups[int]):
 
 
 @dataclass
-class HistoricBasedSampleParams(SampleParams):
+class HistoricBasedSamplerParams(object):
     share_of_all_users: float
     share_of_sample_for_pilot: float
 
@@ -68,18 +68,18 @@ class HistoricalDataSampler(tp.Generic[T]):
         self,
         df_daily_users: pd.DataFrame,
         df_user_sessions: pd.DataFrame,
-        **sampler_kwargs: tp.Any,
+        sampler_params: HistoricBasedSamplerParams,
     ) -> None:
         self.df_user_sessions = df_user_sessions
         self.df_daily_users = df_daily_users
-        self.sampler_kwargs = sampler_kwargs
+        self.sampler_params = sampler_params
 
     @staticmethod
     @abstractmethod
     def _sample(
         df_user_sessions: pd.DataFrame,
         n_unique_users_for_period: pd.Series,
-        sample_params: HistoricBasedSampleParams,
+        sample_params: HistoricBasedSamplerParams,
     ) -> StratifiedGroups:
         pass
 
@@ -91,14 +91,14 @@ class HistoricalDataSampler(tp.Generic[T]):
         is_selected_day = df_daily_users.index == starting_date + timedelta(n_days - 1)
         return df_daily_users[is_selected_day].set_index(STRATA_COLUMN)['unique_users_cumcount']
 
-    def __call__(self, n_days: int, sample_params: HistoricBasedSampleParams) -> StratifiedGroups:
+    def __call__(self, n_days: int) -> StratifiedGroups:
         n_unique_users_for_period = self._get_n_unique_users_for_period(
             self.df_daily_users, n_days,
         )
         return self._sample(
             self.df_user_sessions,
             n_unique_users_for_period,
-            sample_params,
+            self.sampler_params,
         )
 
 

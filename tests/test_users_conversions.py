@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from btech_experiment import HistoricBasedSampleParams, eval_strats_weights
+from btech_experiment import HistoricBasedSamplerParams, eval_strats_weights
 from btech_experiment.estimators import (
     HistoricalUsersConversionsSampler,
     StratifiedUserConversions,
@@ -12,16 +12,15 @@ from duration_estimator import Effect
 
 class TestUserConversionsCase:
     @pytest.fixture
-    def sample_params(self) -> HistoricBasedSampleParams:
-        return HistoricBasedSampleParams(0.5, 0.2)
+    def sampler_params(self) -> HistoricBasedSamplerParams:
+        return HistoricBasedSamplerParams(0.5, 0.2)
 
     @pytest.fixture
     def groups(
-            self,
-            sampler: HistoricalUsersConversionsSampler,
-            sample_params: HistoricBasedSampleParams,
+        self,
+        sampler: HistoricalUsersConversionsSampler,
     ) -> StratifiedUserConversions:
-        return sampler(n_days=1, sample_params=sample_params)
+        return sampler(n_days=1)
 
     @pytest.fixture
     def strats_weights(self, df_daily_users: pd.DataFrame) -> pd.Series:
@@ -29,15 +28,16 @@ class TestUserConversionsCase:
 
     @pytest.fixture
     def sampler(
-            self,
-            df_daily_users: pd.DataFrame,
-            df_user_sessions: pd.DataFrame,
+        self,
+        df_daily_users: pd.DataFrame,
+        df_user_sessions: pd.DataFrame,
+        sampler_params: HistoricBasedSamplerParams,
     ) -> HistoricalUsersConversionsSampler:
-        return HistoricalUsersConversionsSampler(df_daily_users, df_user_sessions)
+        return HistoricalUsersConversionsSampler(df_daily_users, df_user_sessions, sampler_params)
 
     def test_sampling(
-            self,
-            groups: StratifiedUserConversions,
+        self,
+        groups: StratifiedUserConversions,
     ) -> None:
         assert 'ANDROID' in groups.pilot.keys()
         assert 'IOS' in groups.pilot.keys()
@@ -45,10 +45,9 @@ class TestUserConversionsCase:
         assert groups.pilot['IOS'].shape == (5,)
 
     def test_evaluating_metric_on_initial_sample(
-            self,
-            strats_weights: pd.Series,
-            groups: StratifiedUserConversions,
-
+        self,
+        strats_weights: pd.Series,
+        groups: StratifiedUserConversions,
     ) -> None:
         metrics = UsersConversionsBootstrap.estimate_metric(
             groups, strats_weights=strats_weights,
@@ -57,10 +56,9 @@ class TestUserConversionsCase:
         assert isinstance(metrics.control, float)
 
     def test_bootstrapping_sample(
-            self,
-            sampler: HistoricalUsersConversionsSampler,
-            groups: StratifiedUserConversions,
-
+        self,
+        sampler: HistoricalUsersConversionsSampler,
+        groups: StratifiedUserConversions,
     ) -> None:
         bootstrapped_samples = UsersConversionsBootstrap.bootstrap_sample(5, groups)
         assert 'ANDROID' in groups.pilot.keys()
@@ -87,10 +85,9 @@ class TestUserConversionsCase:
         assert len(boot_metric.pilot) == 5
 
     def test_end_to_end(
-            self,
-            strats_weights: pd.Series,
-            groups: StratifiedUserConversions,
-
+        self,
+        strats_weights: pd.Series,
+        groups: StratifiedUserConversions,
     ) -> None:
         boot = UsersConversionsBootstrap(strats_weights)
         found_effect = boot(groups, Effect(1000.0, is_additive=True))

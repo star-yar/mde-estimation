@@ -5,7 +5,7 @@ import pandas as pd
 
 from duration_estimator.experiment_conductors import Bootstrap
 from ..historical_data_sampler import (
-    HistoricBasedSampleParams,
+    HistoricBasedSamplerParams,
     HistoricalDataSampler,
     StratifiedGroups,
 )
@@ -19,7 +19,7 @@ class HistoricalUsersConversionsSampler(HistoricalDataSampler[_TSample]):
     def _sample(
             df_user_sessions: pd.DataFrame,
             n_unique_users_for_period: pd.Series,
-            sample_params: HistoricBasedSampleParams,
+            sample_params: HistoricBasedSamplerParams,
     ) -> StratifiedUserConversions:
         sample_pilot = {}
         sample_control = {}

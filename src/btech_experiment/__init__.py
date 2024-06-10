@@ -1,6 +1,6 @@
 from . import estimators
 from .historical_data_sampler import (
-    HistoricBasedSampleParams,
+    HistoricBasedSamplerParams,
     HistoricalDataSampler,
     StratifiedGroups,
     eval_strats_weights,
