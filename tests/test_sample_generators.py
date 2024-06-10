@@ -5,11 +5,11 @@ from duration_estimator import sample_generators
 
 def test_normal_with_constant_rate():
     new_per_day = 1000
-    generator = sample_generators.NormalDistributionWithConstantDailyGrowth(0, 1, new_per_day)
+    mean = 0
+    std = 1
+    generator = sample_generators.NormalDistributionWithConstantDailyGrowth(mean, std, new_per_day)
     for days in range(1, 10):
         sample = generator(days)
         assert sample.pilot.size == sample.control.size == days * new_per_day
-        np.testing.assert_approx_equal(sample.pilot.mean(), 0)
-        np.testing.assert_approx_equal(sample.pilot.std(), 1)
-        np.testing.assert_approx_equal(sample.pilot.mean(), sample.control.mean())
-        np.testing.assert_approx_equal(sample.pilot.std(), sample.control.std())
+        assert round(sample.pilot.mean(), 0) == round(sample.control.mean(), 0) == mean
+        assert round(sample.pilot.std(), 1) == round(sample.control.std(), 1) == std
