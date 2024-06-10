@@ -4,23 +4,19 @@ build-backend = "setuptools.build_meta"
 
 
 [project]
-dynamic = ["version", "dependencies", "optional-dependencies"]
-name = "btech_experiment"
-description = "A sample Python project"
+dynamic = ["version", "dependencies"]
+name = "duration_estimator"
+description = "A tool for measuring AB experiment metrics such as MDE, I and II error levels, expected effect"
 readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}
-keywords = ["AB", "hypothesis testing"]  # todo
+keywords = ["AB", "hypothesis testing", "experiemnts", "statistics", "significance testing", "MDE"]
 authors = [
   {name = "Yaroslav Starukhin", email = "vestnik.yar@gmail.com" }
 ]
 maintainers = [
   {name = "Yaroslav Starukhin", email = "vestnik.yar@gmail.com" }
 ]
-
-# Classifiers help users find your project by categorizing it.
-#
-# For a list of valid classifiers, see https://pypi.org/classifiers/
 classifiers = [
   "Development Status :: 3 - Alpha",
 
