@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+
+[project]
+dynamic = ["version", "dependencies", "optional-dependencies"]
+name = "btech_experiment"
+description = "A sample Python project"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+keywords = ["AB", "hypothesis testing"]  # todo
+authors = [
+  {name = "Yaroslav Starukhin", email = "vestnik.yar@gmail.com" }
+]
+maintainers = [
+  {name = "Yaroslav Starukhin", email = "vestnik.yar@gmail.com" }
+]
+
+# Classifiers help users find your project by categorizing it.
+#
+# For a list of valid classifiers, see https://pypi.org/classifiers/
+classifiers = [
+  "Development Status :: 3 - Alpha",
+
+  # Indicate who your project is intended for
+  "Intended Audience :: Developers",
+  "Topic :: Software Development :: Build Tools",
+
+  # Pick your license as you wish
+  "License :: OSI Approved :: MIT License",
+
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3 :: Only",
+]
+
+[project.optional-dependencies]
+# todo
+dev = ["check-manifest"]
+test = ["coverage"]
+
+[project.urls]
+# todo
+
+[project.scripts]
+# todo
+
+
+# This is configuration specific to the `setuptools` build backend.
+# If you are using a different build backend, you will need to change this.
+[tool.setuptools]
+# todo: add non source files data
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
