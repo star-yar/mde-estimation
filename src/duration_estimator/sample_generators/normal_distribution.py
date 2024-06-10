@@ -16,7 +16,7 @@ class NormalWithConstantRateSampleParams(SampleParams):
 
 
 def get_groups_from_normal_with_constant_new_users_rate(
-        n_days: int, sample_params: NormalWithConstantRateSampleParams,
+    n_days: int, sample_params: NormalWithConstantRateSampleParams,
 ) -> Groups[np.ndarray]:
     sample_size = sample_params.n_users_per_day * n_days
     return Groups(

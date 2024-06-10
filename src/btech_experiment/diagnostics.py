@@ -15,8 +15,8 @@ COLORS = px.colors.qualitative.T10
 
 
 def show_diagnostics(
-        df_daily_users: pd.DataFrame,
-        sample_params: HistoricBasedSampleParams,
+    df_daily_users: pd.DataFrame,
+    sample_params: HistoricBasedSampleParams,
 ) -> None:
     experiment_data = evaluate_experiment_data(df_daily_users, sample_params)
 
@@ -70,7 +70,7 @@ def show_diagnostics(
 
 
 def evaluate_experiment_data(
-        df_daily_users: pd.DataFrame, sample_params: HistoricBasedSampleParams,
+    df_daily_users: pd.DataFrame, sample_params: HistoricBasedSampleParams,
 ) -> pd.DataFrame:
     df_daily_users = df_daily_users.copy()
     get_size = lambda size_column, group_name: getattr(

@@ -12,7 +12,7 @@ from duration_estimator.sample_generators.normal_distribution import (
 
 def test_normal_distribution_duration_is_correct() -> None:
     experiment_simulator = ExperimentDurationEstimator(
-        effect=Effect(0.1, is_additive=False),
+        expected_effect=Effect(0.1, is_additive=False),
         sample_params=NormalWithConstantRateSampleParams(
             mean=100, std=18, n_users_per_day=10, random_gen=np.random.RandomState(42),
         ),

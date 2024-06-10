@@ -21,7 +21,7 @@ class ConfInterval:
 
 
 def get_ci_bootstrap_pivotal(
-        bootstraped_estimations: np.ndarray, pointwise_estimation: float, alpha: float = 0.05,
+    bootstraped_estimations: np.ndarray, pointwise_estimation: float, alpha: float = 0.05,
 ) -> ConfInterval:
     """
     Estimates central conf interval
@@ -48,26 +48,26 @@ class Bootstrap(ABC, tp.Generic[TSample]):
     @staticmethod
     @abstractmethod
     def estimate_metric(
-            groups: Groups[TSample],
-            sample_size_axis: int = 0,
-            **metric_kwargs: tp.Any,
+        groups: Groups[TSample],
+        sample_size_axis: int = 0,
+        **metric_kwargs: tp.Any,
     ) -> Groups[TSample]:
         pass
 
     @staticmethod
     @abstractmethod
     def bootstrap_sample(
-            bootstrap_size: int,
-            groups: Groups[TSample],
-            **kwargs: tp.Any,
+        bootstrap_size: int,
+        groups: Groups[TSample],
+        **kwargs: tp.Any,
     ) -> Groups[TSample]:
         pass
 
     def __call__(
-            self,
-            groups: Groups[TSample],
-            effect: Effect,
-            boostrap_size: int = 1000,
+        self,
+        groups: Groups[TSample],
+        effect: Effect,
+        boostrap_size: int = 1000,
     ) -> FoundEffect:
         metrics = self.estimate_metric(groups, **self._metric_kwargs)
         boostrap_samples = self.bootstrap_sample(boostrap_size, groups, **self._bootstrap_sample_kwargs)

@@ -14,7 +14,7 @@ MeansGroups = Groups[np.ndarray]
 class BootstrapForMeans(Bootstrap[TMeansSample]):
     @staticmethod
     def estimate_metric(
-            groups: MeansGroups, sample_size_axis: int = 0, **kwargs: tp.Any,
+        groups: MeansGroups, sample_size_axis: int = 0, **kwargs: tp.Any,
     ) -> Groups[tp.Union[float, np.ndarray]]:
         return Groups(
             np.mean(groups.control, axis=sample_size_axis),
@@ -23,7 +23,7 @@ class BootstrapForMeans(Bootstrap[TMeansSample]):
 
     @staticmethod
     def bootstrap_sample(
-            bootstrap_size: int, groups: MeansGroups, **kwargs: tp.Any,
+        bootstrap_size: int, groups: MeansGroups, **kwargs: tp.Any,
     ) -> Groups[tp.Union[float, np.ndarray]]:
         return Groups(
             np.random.choice(groups.control, (groups.control.size, bootstrap_size)),

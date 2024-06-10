@@ -28,7 +28,7 @@ class HistoricBasedSampleParams(SampleParams):
         return 1 - self.share_of_sample_for_pilot
 
     def get_groups_sizes(
-            self, experiment_sample_size: tp.Union[int, pd.Series],
+        self, experiment_sample_size: tp.Union[int, pd.Series],
     ) -> GroupsSizes:
         pilot_size = np.floor(
             self.share_of_sample_for_pilot
@@ -45,7 +45,7 @@ class HistoricBasedSampleParams(SampleParams):
         )
 
     def get_sample_size(
-            self, whole_sample_size: tp.Union[int, pd.Series],
+        self, whole_sample_size: tp.Union[int, pd.Series],
     ) -> pd.Series:
         size = np.floor(
             self.share_of_all_users * whole_sample_size
@@ -57,7 +57,7 @@ class HistoricBasedSampleParams(SampleParams):
         )
 
     def get_groups_sizes_from_general_sample_size(
-            self, whole_sample_size: tp.Union[int, pd.Series],
+        self, whole_sample_size: tp.Union[int, pd.Series],
     ) -> GroupsSizes:
         experiment_sample_size = self.get_sample_size(whole_sample_size)
         return self.get_groups_sizes(experiment_sample_size)
@@ -65,10 +65,10 @@ class HistoricBasedSampleParams(SampleParams):
 
 class HistoricalDataSampler(tp.Generic[T]):
     def __init__(
-            self,
-            df_daily_users: pd.DataFrame,
-            df_user_sessions: pd.DataFrame,
-            **sampler_kwargs: tp.Any,
+        self,
+        df_daily_users: pd.DataFrame,
+        df_user_sessions: pd.DataFrame,
+        **sampler_kwargs: tp.Any,
     ) -> None:
         self.df_user_sessions = df_user_sessions
         self.df_daily_users = df_daily_users
@@ -77,15 +77,15 @@ class HistoricalDataSampler(tp.Generic[T]):
     @staticmethod
     @abstractmethod
     def _sample(
-            df_user_sessions: pd.DataFrame,
-            n_unique_users_for_period: pd.Series,
-            sample_params: HistoricBasedSampleParams,
+        df_user_sessions: pd.DataFrame,
+        n_unique_users_for_period: pd.Series,
+        sample_params: HistoricBasedSampleParams,
     ) -> StratifiedGroups:
         pass
 
     @staticmethod
     def _get_n_unique_users_for_period(
-            df_daily_users: pd.DataFrame, n_days: int,
+        df_daily_users: pd.DataFrame, n_days: int,
     ) -> pd.Series:
         starting_date = df_daily_users.index.min()
         is_selected_day = df_daily_users.index == starting_date + timedelta(n_days - 1)
@@ -104,6 +104,6 @@ class HistoricalDataSampler(tp.Generic[T]):
 
 def eval_strats_weights(df_daily_users: pd.DataFrame) -> pd.Series:
     return (
-            df_daily_users.groupby(STRATA_COLUMN)[NEW_USERS_COLUMN].sum()
-            / df_daily_users[NEW_USERS_COLUMN].sum()
+        df_daily_users.groupby(STRATA_COLUMN)[NEW_USERS_COLUMN].sum()
+        / df_daily_users[NEW_USERS_COLUMN].sum()
     )

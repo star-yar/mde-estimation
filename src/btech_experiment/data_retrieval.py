@@ -20,7 +20,7 @@ def load_credentials(path: str) -> Credentials:
 
 
 def get_data_from_query(
-        query: str, credentials: Credentials,
+    query: str, credentials: Credentials,
 ) -> pd.DataFrame:
     return pandas_gbq.read_gbq(query, credentials=credentials)
 
@@ -107,9 +107,9 @@ def get_user_sessions(from_: TDate, to: TDate, credentials: Credentials) -> pd.D
 
 
 def get_period(
-        last_available_period_date: str,
-        n_month_from_last_date: int,
-        date_fmt: str = '%Y-%m-%d',
+    last_available_period_date: str,
+    n_month_from_last_date: int,
+    date_fmt: str = '%Y-%m-%d',
 ) -> tp.Tuple[str, str]:
     to = pd.to_datetime(last_available_period_date, format=date_fmt)
     from_ = date(to.year, to.month - n_month_from_last_date, to.day)

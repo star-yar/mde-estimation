@@ -8,9 +8,9 @@ EXPERIMENTS_PATH = Path(__file__).parents[2] / 'data'
 
 
 def save_experiment_result(
-        experiment_name: str,
-        duration_estimator: ExperimentDurationEstimator,
-        experiments_dir: str,
+    experiment_name: str,
+    duration_estimator: ExperimentDurationEstimator,
+    experiments_dir: str,
 ) -> None:
     filename = f'{experiments_dir}/{experiment_name}.json'
     with open(filename, 'w') as f:
@@ -30,7 +30,7 @@ def save_experiment_result(
 
 
 def load_experiment_result(
-        experiment_name: str, experiments_dir: str,
+    experiment_name: str, experiments_dir: str,
 ) -> tp.List[TestErrors]:
     with open(f'{experiments_dir}/{experiment_name}.json', 'r') as f:
         results = json.load(f)

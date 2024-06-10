@@ -24,12 +24,12 @@ class Groups(tp.Generic[T]):
 
 class ExperimentConductor(tp.Protocol):
     def __call__(self, groups: Groups[tp.Any], effect: Effect) -> FoundEffect:
-        ...
+        """Conducts experiment and return effect"""
 
 
 class SampleGenerator(tp.Protocol):
     def __call__(self, n_days: int, sample_params: SampleParams) -> Groups[tp.Any]:
-        ...
+        """Generates sample given the duration of an experiment and sample params"""
 
 
 @dataclass
@@ -99,27 +99,29 @@ class FoundEffect:
 
 class ExperimentDurationEstimator:
     def __init__(
-            self,
-            effect: Effect,
-            experiment_conductor: ExperimentConductor,
-            sample_generator: SampleGenerator,
-            sample_params: SampleParams,
-            max_days: int = 30,
+        self,
+        expected_effect: Effect,
+        experiment_conductor: ExperimentConductor,
+        sample_generator: SampleGenerator,
+        sample_params: SampleParams,
+        max_days: int = 30,
     ) -> None:
         """
-        todo
+        Estimates the experiment for each duration in range(1, max_days)
+        given the expected effect. For each step evaluates I and II type errors.
 
         Args:
-            effect: effect size in percents, possible values > 0,
-                let's say 0.1 is passed then metric has increased on 10%.
-            experiment_conductor:
-            sample_generator:
+            expected_effect: effect size in percents, possible values > 0,
+                let's say 0.1 is passed then metric has increased by 10%.
+            experiment_conductor: defines how single experiment is conducted
+            sample_generator: is used for generating sample for each duration of experiment
+                (do not confuse with generating samples during bootstrapping or else)
             sample_params: params passed to `self.sample_generator`
             max_days: max experiment duration
         """
 
         self._error_rates = None
-        self.effect = effect
+        self.expected_effect = expected_effect
         self.sample_params = sample_params
         self.max_days = max_days
 
@@ -129,7 +131,7 @@ class ExperimentDurationEstimator:
     def __repr__(self) -> str:
         return (
             f'{type(self).__name__}\n'
-            f'effect: {asdict(self.effect)}\n'
+            f'effect: {asdict(self.expected_effect)}\n'
             f'sample_params: {asdict(self.sample_params)}\n'
             f'max_days: {self.max_days}\n'
             f'experiment_conductor: {type(self.experiment_conductor).__name__}\n'
@@ -143,9 +145,9 @@ class ExperimentDurationEstimator:
         return self._error_rates
 
     def fit(
-            self,
-            n_experiment_runs_per_day_simulation: int = 100,
-            verbose: bool = False,
+        self,
+        n_experiment_runs_per_day_simulation: int = 100,
+        verbose: bool = False,
     ) -> ExperimentDurationEstimator:
         """Returns error rates based on duration from 1 to max_days
 
@@ -168,11 +170,11 @@ class ExperimentDurationEstimator:
         return self
 
     def _measure_error_rate_for_given_duration(
-            self,
-            n_days: int,
-            n_iterations: int = 250,
-            verbose: bool = False,
-            n_jobs: int = -1,
+        self,
+        n_days: int,
+        n_iterations: int = 250,
+        verbose: bool = False,
+        n_jobs: int = -1,
     ) -> TestErrors:
         iterator = (
             trange(n_iterations, leave=False)
@@ -187,7 +189,7 @@ class ExperimentDurationEstimator:
 
     def _measure_one_error(self, n_days: int) -> TestErrors:
         groups = self.sample_generator(n_days, self.sample_params)
-        experiment_results = self.experiment_conductor(groups, self.effect)
+        experiment_results = self.experiment_conductor(groups, self.expected_effect)
         return experiment_results.to_test_errors()
 
     def find_optimal_duration(
